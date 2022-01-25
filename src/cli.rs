@@ -1,5 +1,7 @@
-use chrono::{DateTime, Local, NaiveDateTime, TimeZone};
+use chrono::{DateTime, FixedOffset, ParseResult};
 use structopt::StructOpt;
+
+use crate::{read, write, Frame};
 
 #[derive(StructOpt, Debug)]
 #[structopt(name = "basic")]
@@ -9,18 +11,25 @@ pub struct BaseCli {
     #[structopt(short, long)]
     pub task: Option<String>,
     #[structopt(short, long, parse(try_from_str = parse_datetime))]
-    pub from: Option<DateTime<Local>>,
+    pub from: DateTime<FixedOffset>,
 }
 
-fn parse_datetime(datetime: &str) -> Option<DateTime<Local>> {
-    let naiv = NaiveDateTime::parse_from_str(datetime, "%Y-%m-%dT%H:%M:%S%z")?;
-    let datetime = Local.from_local_datetime(&naiv);
-    match datetime.unwrap() {
-        Ok(a) => Some(a),
-        _ => None,
-    }
+fn parse_datetime(datetime: &str) -> ParseResult<DateTime<FixedOffset>> {
+    DateTime::parse_from_str(datetime, "%Y-%m-%dT%H:%M:%S%z")
 }
 
-pub fn get_args() -> BaseCli {
-    BaseCli::from_args()
+pub fn parse() -> anyhow::Result<()> {
+    let args = BaseCli::from_args();
+    log::debug!("{:#?}", args);
+
+    let frame = Frame {
+        project: args.project,
+        task: args.task,
+        from: DateTime::from(args.from),
+    };
+    write(frame, "frames.json".to_string())?;
+
+    let frames = read("frames.json".to_string())?;
+    log::debug!("{:#?}", frames);
+    Ok(())
 }
