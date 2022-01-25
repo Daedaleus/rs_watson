@@ -1,6 +1,3 @@
-use std::fs::OpenOptions;
-use std::io::{Read, Write};
-
 use log::LevelFilter;
 
 use crate::cli::get_args;
@@ -17,10 +14,10 @@ fn main() -> anyhow::Result<()> {
     log::debug!("{:#?}", cli);
 
 
-    let frame = Frame { project: cli.project, task: Option::Some("Test".to_string()) };
-    write(frame, "frames.json".to_string());
+    let frame = Frame { project: cli.project, task: cli.task, from: cli.from };
+    write(frame, "frames.json".to_string())?;
 
-    let frames = read("frames.json".to_string());
+    let frames = read("frames.json".to_string())?;
     log::debug!("{:#?}", frames);
     Ok(())
 }
