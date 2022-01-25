@@ -12,6 +12,8 @@ pub struct BaseCli {
     pub task: Option<String>,
     #[structopt(short, long, parse(try_from_str = parse_datetime))]
     pub from: DateTime<FixedOffset>,
+    #[structopt(short, long, parse(try_from_str = parse_datetime))]
+    pub until: DateTime<FixedOffset>,
 }
 
 fn parse_datetime(datetime: &str) -> ParseResult<DateTime<FixedOffset>> {
@@ -26,6 +28,7 @@ pub fn parse() -> anyhow::Result<()> {
         project: args.project,
         task: args.task,
         from: DateTime::from(args.from),
+        until: DateTime::from(args.from),
     };
     write(frame, "frames.json".to_string())?;
 
