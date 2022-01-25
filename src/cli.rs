@@ -5,7 +5,7 @@ use crate::{read, write, Frame};
 
 #[derive(StructOpt, Debug)]
 #[structopt(name = "basic")]
-pub struct BaseCli {
+struct BaseCli {
     #[structopt(short, long)]
     pub project: String,
     #[structopt(short, long)]
@@ -28,7 +28,7 @@ pub fn parse() -> anyhow::Result<()> {
         project: args.project,
         task: args.task,
         from: DateTime::from(args.from),
-        until: DateTime::from(args.from),
+        until: DateTime::from(args.until),
     };
     write(frame, "frames.json".to_string())?;
 
