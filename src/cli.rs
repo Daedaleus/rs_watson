@@ -4,35 +4,52 @@ use structopt::StructOpt;
 use crate::{read, write, Frame};
 
 #[derive(StructOpt, Debug)]
-#[structopt(name = "basic")]
-struct BaseCli {
+#[structopt(name = "rs-watson", about = "Time-tracking in rust")]
+struct Cli {
+    #[structopt(subcommand)]
+    cmd: Command,
+}
+
+#[derive(StructOpt, Debug)]
+enum Command {
+    Add(AddCommand),
+}
+
+#[derive(StructOpt, Debug)]
+struct AddCommand {
     #[structopt(short, long)]
-    pub project: String,
+    project: String,
     #[structopt(short, long)]
-    pub task: Option<String>,
+    task: Option<String>,
     #[structopt(short, long, parse(try_from_str = parse_datetime))]
-    pub from: DateTime<FixedOffset>,
+    from: DateTime<FixedOffset>,
     #[structopt(short, long, parse(try_from_str = parse_datetime))]
-    pub until: DateTime<FixedOffset>,
+    until: DateTime<FixedOffset>,
 }
 
 fn parse_datetime(datetime: &str) -> ParseResult<DateTime<FixedOffset>> {
     DateTime::parse_from_str(datetime, "%Y-%m-%dT%H:%M:%S%z")
 }
 
-pub fn parse() -> anyhow::Result<()> {
-    let args = BaseCli::from_args();
-    log::debug!("{:#?}", args);
-
+fn parse_add(cmd: AddCommand) -> anyhow::Result<()> {
     let frame = Frame {
-        project: args.project,
-        task: args.task,
-        from: DateTime::from(args.from),
-        until: DateTime::from(args.until),
+        project: cmd.project,
+        task: cmd.task,
+        from: DateTime::from(cmd.from),
+        until: DateTime::from(cmd.until),
     };
     write(frame, "frames.json".to_string())?;
 
     let frames = read("frames.json".to_string())?;
     log::debug!("{:#?}", frames);
     Ok(())
+}
+
+pub fn parse() -> anyhow::Result<()> {
+    let cli = Cli::from_args();
+    log::debug!("{:#?}", cli);
+
+    match cli.cmd {
+        Command::Add(add_cmd) => parse_add(add_cmd),
+    }
 }
