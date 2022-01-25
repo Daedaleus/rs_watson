@@ -1,10 +1,12 @@
 [package]
 name = "rs_watson"
+description = "Rust clone of tdWatson"
 version = "0.1.0"
 edition = "2021"
 authors = ["Philip Keil <github@pkeil.de>"]
 readme = "README.md"
 license = "MIT"
+repository = "https://github.com/Daedaleus/rs_watson"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
