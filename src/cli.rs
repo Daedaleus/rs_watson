@@ -16,6 +16,7 @@ enum Command {
     Add(AddCommand),
     Start(StartCommand),
     Stop(StopCommand),
+    Log(LogCommand),
 }
 
 #[derive(StructOpt, Debug)]
@@ -41,6 +42,9 @@ struct StartCommand {
 #[derive(StructOpt, Debug)]
 struct StopCommand {}
 
+#[derive(StructOpt, Debug)]
+struct LogCommand {}
+
 fn parse_datetime(datetime: &str) -> ParseResult<DateTime<FixedOffset>> {
     DateTime::parse_from_str(datetime, "%Y-%m-%dT%H:%M:%S%z")
 }
@@ -53,6 +57,7 @@ pub fn parse() -> anyhow::Result<()> {
         Command::Add(add_cmd) => parse_add(add_cmd),
         Command::Start(start_cmd) => parse_start(start_cmd),
         Command::Stop(stop_cmd) => parse_stop(stop_cmd),
+        Command::Log(log_cmd) => parse_log(log_cmd),
     }
 }
 
@@ -91,5 +96,23 @@ fn parse_stop(_: StopCommand) -> anyhow::Result<()> {
     write_all(frames)?;
     let frames = read()?;
     log::debug!("{:#?}", frames);
+    Ok(())
+}
+
+fn parse_log(_: LogCommand) -> anyhow::Result<()> {
+    let frames = read()?;
+    for frame in frames {
+        let project = frame.project;
+        let task = match frame.task {
+            Some(a) => a,
+            _ => "".to_string(),
+        };
+        let from = frame.from;
+        let until = match frame.until {
+            Some(a) => a.to_string(),
+            _ => "".to_string(),
+        };
+        println!("{}: {} ({} - {})", project, task, from, until);
+    }
     Ok(())
 }
