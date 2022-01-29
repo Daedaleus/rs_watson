@@ -63,9 +63,9 @@ fn parse_add(cmd: AddCommand) -> anyhow::Result<()> {
         from: DateTime::from(cmd.from),
         until: Some(DateTime::from(cmd.until)),
     };
-    write(frame, "frames.json".to_string())?;
+    write(frame)?;
 
-    let frames = read("frames.json".to_string())?;
+    let frames = read()?;
     log::debug!("{:#?}", frames);
     Ok(())
 }
@@ -78,18 +78,18 @@ fn parse_start(cmd: StartCommand) -> anyhow::Result<()> {
         until: None,
     };
     log::debug!("{:#?}", frame);
-    write(frame, "frames.json".to_string())?;
-    let frames = read("frames.json".to_string())?;
+    write(frame)?;
+    let frames = read()?;
     log::debug!("{:#?}", frames);
     Ok(())
 }
 
 fn parse_stop(_: StopCommand) -> anyhow::Result<()> {
-    let mut frames = read("frames.json".to_string())?;
+    let mut frames = read()?;
     let mut frame = frames.first_mut().expect("Not found!");
     frame.until = Some(chrono::offset::Utc::now());
-    write_all(frames, "frames.json".to_string())?;
-    let frames = read("frames.json".to_string())?;
+    write_all(frames)?;
+    let frames = read()?;
     log::debug!("{:#?}", frames);
     Ok(())
 }

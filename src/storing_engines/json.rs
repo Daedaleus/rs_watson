@@ -1,10 +1,12 @@
 use std::fs::{File, OpenOptions};
 use std::io::{Read, Write};
 
+use crate::config::load;
 use crate::Frame;
 
-pub fn read(path: String) -> anyhow::Result<Vec<Frame>> {
-    let mut file = load_file(path);
+pub fn read() -> anyhow::Result<Vec<Frame>> {
+    let json_path = load()?.json_path;
+    let mut file = load_file(json_path);
     let mut content = String::new();
 
     file.read_to_string(&mut content)?;
@@ -13,17 +15,19 @@ pub fn read(path: String) -> anyhow::Result<Vec<Frame>> {
     Ok(frames)
 }
 
-pub fn write(frame: Frame, path: String) -> anyhow::Result<()> {
-    let mut stored_frames = read(path.clone())?;
+pub fn write(frame: Frame) -> anyhow::Result<()> {
+    let json_path = load()?.json_path;
+    let mut stored_frames = read()?;
     stored_frames.push(frame);
-    let mut file = load_file(path);
+    let mut file = load_file(json_path);
     file.write_all(serde_json::to_string(&stored_frames)?.as_ref())?;
 
     Ok(())
 }
 
-pub fn write_all(frames: Vec<Frame>, path: String) -> anyhow::Result<()> {
-    let mut file = load_file(path);
+pub fn write_all(frames: Vec<Frame>) -> anyhow::Result<()> {
+    let json_path = load()?.json_path;
+    let mut file = load_file(json_path);
     file.write_all(serde_json::to_string(&frames)?.as_ref())?;
     Ok(())
 }
