@@ -16,10 +16,15 @@ pub fn read(path: String) -> anyhow::Result<Vec<Frame>> {
 pub fn write(frame: Frame, path: String) -> anyhow::Result<()> {
     let mut stored_frames = read(path.clone())?;
     stored_frames.push(frame);
-
     let mut file = load_file(path);
     file.write_all(serde_json::to_string(&stored_frames)?.as_ref())?;
 
+    Ok(())
+}
+
+pub fn write_all(frames: Vec<Frame>, path: String) -> anyhow::Result<()> {
+    let mut file = load_file(path);
+    file.write_all(serde_json::to_string(&frames)?.as_ref())?;
     Ok(())
 }
 
