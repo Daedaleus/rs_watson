@@ -2,3 +2,4 @@
 /.idea
 *.json
 *.iml
+settings.toml

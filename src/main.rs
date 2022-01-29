@@ -8,6 +8,8 @@ mod cli;
 mod models;
 mod storing_engines;
 
+pub mod config;
+
 fn main() -> anyhow::Result<()> {
     setup_logging();
     parse()?;
