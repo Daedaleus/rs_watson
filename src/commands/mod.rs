@@ -1,8 +1,8 @@
 use chrono::{NaiveDate, NaiveTime};
 use clap_derive::Subcommand;
 
-use crate::Args;
 use crate::storage::entries::Entries;
+use crate::Args;
 
 pub(crate) mod log;
 pub(crate) mod start;
