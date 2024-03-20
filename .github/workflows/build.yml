@@ -1,0 +1,45 @@
+on: [ push, pull_request ]
+
+name: Build
+jobs:
+  build:
+    name: Build (${{ matrix.runs_on }})
+    runs-on: ${{ matrix.runs_on }}
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - os: linux
+            runs_on: ubuntu-latest
+          - os: macos
+            runs_on: macos-latest
+          - os: windows
+            runs_on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo
+      - uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.os }}
+          path: |
+            target/release/rs_watson
+            target/release/rs_watson.exe
+          if-no-files-found: error
