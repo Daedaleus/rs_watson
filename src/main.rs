@@ -10,6 +10,7 @@ use crate::storage::entries::Entries;
 use crate::storage::get_or_create_file;
 
 mod commands;
+mod exporter;
 mod storage;
 
 fn main() -> anyhow::Result<()> {
@@ -28,7 +29,7 @@ fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-#[derive(Parser, Debug)]
+#[derive(Parser)]
 #[command(version, about, long_about = None)]
 struct Args {
     #[command(subcommand)]

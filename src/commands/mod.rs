@@ -1,5 +1,5 @@
 use chrono::{NaiveDate, NaiveTime};
-use clap_derive::Subcommand;
+use clap_derive::{Args, Subcommand};
 
 use crate::storage::entries::Entries;
 use crate::Args;
@@ -8,9 +8,10 @@ pub(crate) mod log;
 pub(crate) mod start;
 pub(crate) mod stop;
 
+mod export;
 pub(crate) mod report;
 
-#[derive(Subcommand, Debug)]
+#[derive(Subcommand)]
 pub enum Command {
     #[clap(name = "start", about = "Start logging")]
     Start {
@@ -44,8 +45,26 @@ pub enum Command {
         project: Option<String>,
     },
     Today,
+    Export {
+        #[clap(short = 'f')]
+        #[arg(value_parser(parse_date))]
+        from: Option<NaiveDate>,
+        #[clap(short = 't')]
+        #[arg(value_parser(parse_date))]
+        to: Option<NaiveDate>,
+        #[clap(short = 'o')]
+        path: String,
+        #[command(flatten)]
+        export_args: ExportArgs,
+    },
 }
 
+#[derive(Args)]
+#[group(required = true, multiple = false)]
+pub struct ExportArgs {
+    #[arg(long)]
+    csv: bool,
+}
 pub fn run(args: Args, entries: &mut Entries) -> anyhow::Result<()> {
     match args.command {
         Command::Start { project, tags, at } => start::invoke(entries, project, tags, at)?,
@@ -56,6 +75,12 @@ pub fn run(args: Args, entries: &mut Entries) -> anyhow::Result<()> {
             let today = chrono::Local::now().naive_local().date();
             report::invoke(entries, Some(today), Some(today), None)?
         }
+        Command::Export {
+            from,
+            to,
+            path,
+            export_args,
+        } => export::invoke(entries, from, to, path, export_args)?,
     };
     Ok(())
 }
