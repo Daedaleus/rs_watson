@@ -69,9 +69,9 @@ impl Entries {
             project_entries_vec.push(ProjectEntry::from(entries));
         }
 
-        let project_entries = Report::from(project_entries_vec);
+        let report = Report::from(project_entries_vec);
 
-        println!("{}", project_entries);
+        println!("{}", report);
     }
 
     pub fn get_unique_project(&self) -> anyhow::Result<String> {

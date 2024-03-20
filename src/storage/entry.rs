@@ -1,5 +1,6 @@
 use std::fmt::Display;
 
+use anyhow::Context;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
@@ -31,14 +32,22 @@ impl Entry {
         })
     }
 
-    pub fn print_report(&self) -> String {
+    pub fn print_report(&self) -> anyhow::Result<String> {
         let tags = self.tags.clone().unwrap_or_default().join(", ");
-        let start = self.start.format("%H:%M");
-        let end = match self.end {
-            Some(end) => end.format("%H:%M").to_string(),
-            None => "now".to_string(),
-        };
-        format!("[{}   {} - {}]", tags, start, end)
+        let duration = self.get_duration_as_human_readable()?;
+        Ok(format!("[{}   {}]", tags, duration))
+    }
+
+    fn calculate_duration(&self) -> anyhow::Result<i64> {
+        let end = self.end.context("Entry has no end time")?;
+        Ok((end - self.start).num_seconds())
+    }
+
+    fn get_duration_as_human_readable(&self) -> anyhow::Result<String> {
+        let duration = self.calculate_duration()?;
+        let hours = duration / 3600;
+        let minutes = (duration % 3600) / 60;
+        Ok(format!("{:02}:{:02}", hours, minutes))
     }
 
     pub fn get_project(&self) -> String {
@@ -47,6 +56,10 @@ impl Entry {
 
     pub fn get_tags(&self) -> Option<Vec<String>> {
         self.tags.clone()
+    }
+
+    pub fn get_tags_as_string(&self) -> String {
+        self.tags.clone().unwrap_or_default().join(", ")
     }
 
     pub fn get_start(&self) -> DateTime<Utc> {
@@ -68,7 +81,6 @@ impl Display for Entry {
         };
         write!(
             f,
-            // f35bb24  09:26 to 10:22  apollo11    [reactor, brakes, steering, wheels, module]
             "{}  {} to {}  {}    [{}]",
             id,
             self.start.format("%H:%M"),
