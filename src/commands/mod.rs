@@ -1,8 +1,8 @@
 use chrono::{NaiveDate, NaiveTime};
 use clap_derive::Subcommand;
 
-use crate::storage::entries::Entries;
 use crate::Args;
+use crate::storage::entries::Entries;
 
 pub(crate) mod log;
 pub(crate) mod start;
@@ -54,7 +54,7 @@ pub fn run(args: Args, entries: &mut Entries) -> anyhow::Result<()> {
         Command::Report { from, to, project } => report::invoke(entries, from, to, project)?,
         Command::Today => {
             let today = chrono::Local::now().naive_local().date();
-            log::invoke(entries, Some(today), Some(today))?
+            report::invoke(entries, Some(today), Some(today), None)?
         }
     };
     Ok(())
