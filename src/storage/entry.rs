@@ -12,6 +12,7 @@ pub struct Entry {
     project: String,
     tags: Option<Vec<String>>,
     start: DateTime<Utc>,
+    #[serde(default)]
     end: Option<DateTime<Utc>>,
 }
 
