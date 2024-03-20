@@ -1,3 +1,3 @@
 # RS Watson
 
-Simple time tracking in Rust
+Simple time tracking in Rust.
