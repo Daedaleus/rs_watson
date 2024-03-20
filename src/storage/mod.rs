@@ -6,6 +6,7 @@ use uuid::Uuid;
 
 pub(crate) mod entries;
 pub(crate) mod entry;
+mod report;
 
 pub fn get_or_create_file(file_name: impl AsRef<Path>) -> anyhow::Result<File> {
     let file = File::open(&file_name);
