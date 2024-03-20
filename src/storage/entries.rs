@@ -2,9 +2,11 @@ use std::collections::HashMap;
 use std::fmt::Display;
 
 use chrono::{DateTime, NaiveDate, Utc};
+use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 
 use crate::storage::entry::Entry;
+use crate::storage::report::{ProjectEntry, Report};
 
 #[derive(Serialize, Deserialize, Default)]
 pub struct Entries {
@@ -14,6 +16,10 @@ pub struct Entries {
 impl Entries {
     pub fn push(&mut self, entry: Entry) {
         self.entries.push(entry);
+    }
+
+    pub fn get_entries(&self) -> Vec<Entry> {
+        self.entries.clone()
     }
     pub fn set_last_end(&mut self, end: DateTime<Utc>) {
         let last = self.entries.last_mut();
@@ -58,12 +64,25 @@ impl Entries {
         }
 
         // TODO: Own object for report
-        for (project, entries) in project_entries {
-            println!("{}", project);
-            for entry in entries.entries {
-                println!("{}", entry);
-            }
+        let mut project_entries_vec: Vec<ProjectEntry> = vec![];
+        for (_, entries) in project_entries {
+            project_entries_vec.push(ProjectEntry::from(entries));
         }
+
+        let project_entries = Report::from(project_entries_vec);
+
+        println!("{}", project_entries);
+    }
+
+    pub fn get_unique_project(&self) -> anyhow::Result<String> {
+        let projects = self
+            .entries
+            .iter()
+            .map(|entry| entry.get_project())
+            .unique()
+            .collect::<Vec<String>>();
+        anyhow::ensure!(projects.len() == 1, "More than one project found");
+        Ok(projects[0].to_string())
     }
 }
 

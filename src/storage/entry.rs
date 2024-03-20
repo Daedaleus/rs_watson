@@ -31,6 +31,16 @@ impl Entry {
         })
     }
 
+    pub fn print_report(&self) -> String {
+        let tags = self.tags.clone().unwrap_or_default().join(", ");
+        let start = self.start.format("%H:%M");
+        let end = match self.end {
+            Some(end) => end.format("%H:%M").to_string(),
+            None => "now".to_string(),
+        };
+        format!("[{}   {} - {}]", tags, start, end)
+    }
+
     pub fn get_project(&self) -> String {
         self.project.clone()
     }
