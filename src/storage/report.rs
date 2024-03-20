@@ -18,7 +18,10 @@ impl Display for Report {
         for project in &self.projects {
             writeln!(f, "{}", project.name)?;
             for entry in &project.entries {
-                writeln!(f, "   {}", entry.print_report())?;
+                let report = entry
+                    .print_report()
+                    .unwrap_or_else(|_| format!("[{:?}]", entry.get_tags_as_string()));
+                writeln!(f, "   {}", report)?;
             }
             writeln!(f)?;
         }
