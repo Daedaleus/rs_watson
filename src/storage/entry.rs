@@ -70,6 +70,10 @@ impl Entry {
     pub fn set_end(&mut self, end: DateTime<Utc>) {
         self.end = Some(end);
     }
+
+    pub fn is_running(&self) -> bool {
+        self.end.is_none()
+    }
 }
 
 impl Display for Entry {

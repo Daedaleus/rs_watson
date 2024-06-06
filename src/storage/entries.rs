@@ -84,6 +84,10 @@ impl Entries {
         anyhow::ensure!(projects.len() == 1, "More than one project found");
         Ok(projects[0].to_string())
     }
+
+    pub fn get_last(&self) -> Option<&Entry> {
+        self.entries.last()
+    }
 }
 
 impl Display for Entries {
