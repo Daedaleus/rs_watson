@@ -13,14 +13,17 @@ pub fn invoke(
 ) -> anyhow::Result<()> {
     let now = Local::now();
     let tags = extract_tags(tags);
-    match entries.get_last().unwrap().is_running() {
-        true => {
-            crate::commands::stop::handle_command(entries, at, now)?;
-            handle_command(entries, &project, at, &now, &tags)?;
+    match entries.get_last() {
+        Some(entry) => {
+            if entry.is_running() {
+                crate::commands::stop::handle_command(entries, at, now)?;
+                handle_command(entries, &project, at, &now, &tags)?;
+            } else {
+                handle_command(entries, &project, at, &now, &tags)?
+            }
         }
-        false => handle_command(entries, &project, at, &now, &tags)?,
+        None => handle_command(entries, &project, at, &now, &tags)?,
     }
-
     Ok(())
 }
 
@@ -55,9 +58,21 @@ fn without_start(
 
     println!(
         "Start logging of project {} with tags {} at {}",
-        entry.get_project().clone(),
-        entry.get_tags().clone().unwrap_or_default().join(", "),
-        entry.get_start().clone()
+        entry.get_project().clone().bright_green(),
+        entry
+            .get_tags()
+            .clone()
+            .unwrap_or_default()
+            .join(", ")
+            .bright_green(),
+        entry
+            .get_start()
+            .clone()
+            .format("%H:%M:%S")
+            .to_string()
+            .cyan()
+            .to_string()
+            .green()
     );
     entries.push(entry);
     Ok(())

@@ -1,5 +1,7 @@
 use std::fmt::Display;
 
+use colored::Colorize;
+
 use crate::storage::entries::Entries;
 use crate::storage::entry::Entry;
 
@@ -16,7 +18,7 @@ impl From<Vec<ProjectEntry>> for Report {
 impl Display for Report {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for project in &self.projects {
-            writeln!(f, "{}", project.name)?;
+            writeln!(f, "{}", project.name.bright_green())?;
             for entry in &project.entries {
                 let report = entry
                     .print_report()

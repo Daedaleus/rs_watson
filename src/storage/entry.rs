@@ -2,6 +2,7 @@ use std::fmt::Display;
 
 use anyhow::Context;
 use chrono::{DateTime, Utc};
+use colored::Colorize;
 use serde::{Deserialize, Serialize};
 
 use crate::storage::gen_id;
@@ -36,7 +37,7 @@ impl Entry {
     pub fn print_report(&self) -> anyhow::Result<String> {
         let tags = self.tags.clone().unwrap_or_default().join(", ");
         let duration = self.get_duration_as_human_readable()?;
-        Ok(format!("[{}   {}]", tags, duration))
+        Ok(format!("[{}   {}]", tags.bright_cyan(), duration.cyan()))
     }
 
     fn calculate_duration(&self) -> anyhow::Result<i64> {
@@ -88,10 +89,10 @@ impl Display for Entry {
             f,
             "{}  {} to {}  {}    [{}]",
             id,
-            self.start.format("%H:%M"),
-            end,
-            self.project,
-            tags
+            self.start.format("%H:%M").to_string().cyan(),
+            end.cyan(),
+            self.project.bright_cyan(),
+            tags.bright_cyan()
         )
     }
 }
