@@ -4,13 +4,12 @@ use clap_derive::{Args, Subcommand};
 use crate::Args;
 use crate::storage::entries::Entries;
 
-pub(crate) mod log;
-pub(crate) mod start;
-pub(crate) mod stop;
-
 pub(crate) mod edit;
 pub(crate) mod export;
+pub(crate) mod log;
 pub(crate) mod report;
+pub(crate) mod start;
+pub(crate) mod stop;
 
 #[derive(Subcommand)]
 pub enum Command {
