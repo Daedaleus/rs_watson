@@ -1,6 +1,14 @@
+use std::path::PathBuf;
+
 use anyhow::Context;
 use clap::Error;
+use directories::ProjectDirs;
 use serde::{Deserialize, Serialize};
+
+enum LocationType {
+    Config,
+    Data,
+}
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Config {
@@ -15,10 +23,20 @@ struct Files {
 
 impl Default for Config {
     fn default() -> Self {
+        let file_path =
+            PathBuf::from_iter([Config::get_location(LocationType::Data), "watson".into()])
+                .with_extension("json");
+        let file_path = file_path.to_str().unwrap();
+
+        let config_path =
+            PathBuf::from_iter([Config::get_location(LocationType::Config), "config".into()])
+                .with_extension("toml");
+        let config_path = config_path.to_str().unwrap();
+
         Self {
             files: Files {
-                file_name: "watson.json".to_string(),
-                config_name: "config.toml".to_string(),
+                file_name: file_path.into(),
+                config_name: config_path.into(),
             },
         }
     }
@@ -50,6 +68,31 @@ impl Config {
             .context("Failed to write config.toml")
             .unwrap();
         Ok(())
+    }
+
+    fn get_location(location_type: LocationType) -> String {
+        let root_dir = ProjectDirs::from("de", "daedaleus", "rswatson")
+            .context("Failed to get project directories")
+            .unwrap();
+        match location_type {
+            LocationType::Config => {
+                let path = root_dir.config_dir().to_str().unwrap().to_string();
+                Self::create_location(path)
+            }
+            LocationType::Data => {
+                let path = root_dir.data_dir().to_str().unwrap().to_string();
+                Self::create_location(path)
+            }
+        }
+    }
+
+    fn create_location(path: String) -> String {
+        if !std::path::Path::new(&path).exists() {
+            std::fs::create_dir_all(&path)
+                .context("Failed to create config directory")
+                .unwrap();
+        }
+        path
     }
 
     pub fn get_file_name(&self) -> String {
