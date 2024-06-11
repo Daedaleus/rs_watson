@@ -75,6 +75,10 @@ impl Entry {
     pub fn is_running(&self) -> bool {
         self.end.is_none()
     }
+
+    pub fn get_id(&self) -> String {
+        self.id.clone()
+    }
 }
 
 impl Display for Entry {

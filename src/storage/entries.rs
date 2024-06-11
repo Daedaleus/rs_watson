@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::fmt::Display;
 
+use anyhow::{Error, Result};
 use chrono::{DateTime, NaiveDate, Utc};
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
@@ -12,6 +13,8 @@ use crate::storage::report::{ProjectEntry, Report};
 pub struct Entries {
     entries: Vec<Entry>,
 }
+
+impl Entries {}
 
 impl Entries {
     pub fn push(&mut self, entry: Entry) {
@@ -87,6 +90,26 @@ impl Entries {
 
     pub fn get_last(&self) -> Option<&Entry> {
         self.entries.last()
+    }
+
+    pub(crate) fn get_by_hash(&self, hash: impl Into<String>) -> Result<Entry, Error> {
+        let hash = hash.into();
+        let entry = self
+            .entries
+            .iter()
+            .find(|entry| entry.get_id().starts_with(&hash))
+            .ok_or_else(|| Error::msg("Entry not found"))?;
+        Ok(entry.clone())
+    }
+
+    pub(crate) fn update(&mut self, entry: Entry) -> Result<()> {
+        let index = self
+            .entries
+            .iter()
+            .position(|e| e.get_id() == entry.get_id())
+            .ok_or_else(|| Error::msg("Entry not found"))?;
+        self.entries[index] = entry;
+        Ok(())
     }
 }
 

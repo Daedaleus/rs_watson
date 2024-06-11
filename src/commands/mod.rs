@@ -1,14 +1,15 @@
 use chrono::{NaiveDate, NaiveTime};
 use clap_derive::{Args, Subcommand};
 
-use crate::storage::entries::Entries;
 use crate::Args;
+use crate::storage::entries::Entries;
 
 pub(crate) mod log;
 pub(crate) mod start;
 pub(crate) mod stop;
 
-mod export;
+pub(crate) mod edit;
+pub(crate) mod export;
 pub(crate) mod report;
 
 #[derive(Subcommand)]
@@ -57,6 +58,9 @@ pub enum Command {
         #[command(flatten)]
         export_args: ExportArgs,
     },
+    Edit {
+        hash: String,
+    },
 }
 
 #[derive(Args)]
@@ -81,6 +85,7 @@ pub fn run(args: Args, entries: &mut Entries) -> anyhow::Result<()> {
             path,
             export_args,
         } => export::invoke(entries, from, to, path, export_args)?,
+        Command::Edit { hash } => edit::invoke(entries, hash)?,
     };
     Ok(())
 }
