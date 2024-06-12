@@ -26,7 +26,8 @@ fn main() -> Result<()> {
     let file = File::create(config.get_file_name())
         .context("Failed to write result to watson.json")
         .unwrap();
-    serde_json::to_writer(&file, &entries).context("Failed to write result to watson.json")?;
+    serde_json::to_writer_pretty(&file, &entries)
+        .context("Failed to write result to watson.json")?;
 
     Ok(())
 }
