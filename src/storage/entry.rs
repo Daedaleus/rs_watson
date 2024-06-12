@@ -102,7 +102,6 @@ impl Display for Entry {
 }
 
 #[cfg(test)]
-
 mod tests {
     use super::*;
 
