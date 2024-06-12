@@ -1,8 +1,8 @@
 use chrono::{NaiveDate, NaiveTime};
 use clap_derive::{Args, Subcommand};
 
-use crate::storage::entries::Entries;
 use crate::Args;
+use crate::storage::entries::Entries;
 
 pub(crate) mod edit;
 pub(crate) mod export;
@@ -70,21 +70,23 @@ pub struct ExportArgs {
 }
 pub fn run(args: Args, entries: &mut Entries) -> anyhow::Result<()> {
     match args.command {
-        Command::Start { project, tags, at } => start::invoke(entries, project, tags, at)?,
-        Command::Stop { at } => stop::invoke(entries, at)?,
-        Command::Log { from, to } => log::invoke(entries, from, to)?,
-        Command::Report { from, to, project } => report::invoke(entries, from, to, project)?,
+        Command::Start { project, tags, at } => start::Start::invoke(entries, project, tags, at)?,
+        Command::Stop { at } => stop::Stop::invoke(entries, at)?,
+        Command::Log { from, to } => log::Log::invoke(entries, from, to)?,
+        Command::Report { from, to, project } => {
+            report::Report::invoke(entries, from, to, project)?
+        }
         Command::Today => {
             let today = chrono::Local::now().naive_local().date();
-            report::invoke(entries, Some(today), Some(today), None)?
+            report::Report::invoke(entries, Some(today), Some(today), None)?
         }
         Command::Export {
             from,
             to,
             path,
             export_args,
-        } => export::invoke(entries, from, to, path, export_args)?,
-        Command::Edit { hash } => edit::invoke(entries, hash)?,
+        } => export::Export::invoke(entries, from, to, path, export_args)?,
+        Command::Edit { hash } => edit::Edit::invoke(entries, hash)?,
     };
     Ok(())
 }
