@@ -1,9 +1,9 @@
 use chrono::{NaiveDate, NaiveTime};
 use clap_derive::{Args, Subcommand};
 
-use crate::Args;
 use crate::commands::Command::{Edit, Export, Log, Report, Start, Stop, Today};
 use crate::storage::entries::Entries;
+use crate::Args;
 
 pub(crate) mod edit;
 pub(crate) mod export;

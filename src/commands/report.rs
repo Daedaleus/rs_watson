@@ -1,4 +1,4 @@
-use crate::commands::{Command, date_or_max, date_or_min, Invokable};
+use crate::commands::{date_or_max, date_or_min, Command, Invokable};
 use crate::storage::entries::Entries;
 
 pub(crate) struct Report;
