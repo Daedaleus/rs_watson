@@ -2,34 +2,36 @@ use anyhow::Error;
 use chrono::{DateTime, Local, NaiveTime, TimeZone, Utc};
 use colored::Colorize;
 
+use crate::commands::{Command, Invokable};
 use crate::storage::entries::Entries;
 use crate::storage::entry::Entry;
 
 pub(crate) struct Start;
 
-impl Start {
-    pub fn invoke(
-        entries: &mut Entries,
-        project: String,
-        tags: Option<Vec<String>>,
-        at: Option<NaiveTime>,
-    ) -> anyhow::Result<()> {
-        let now = Local::now();
-        let tags = Self::extract_tags(tags);
-        match entries.get_last() {
-            Some(entry) => {
-                if entry.is_running() {
-                    crate::commands::stop::Stop::handle_command(entries, at, now)?;
-                    Self::handle_command(entries, &project, at, &now, &tags)?;
-                } else {
-                    Self::handle_command(entries, &project, at, &now, &tags)?
+impl Invokable for Start {
+    fn invoke(&self, entries: &mut Entries, params: Command) -> anyhow::Result<()> {
+        if let Command::Start { project, tags, at } = params {
+            let now = Local::now();
+            let tags = Self::extract_tags(tags);
+            match entries.get_last() {
+                Some(entry) => {
+                    if entry.is_running() {
+                        crate::commands::stop::Stop::handle_command(entries, at, now)?;
+                        Self::handle_command(entries, &project, at, &now, &tags)?;
+                    } else {
+                        Self::handle_command(entries, &project, at, &now, &tags)?
+                    }
                 }
+                None => Self::handle_command(entries, &project, at, &now, &tags)?,
             }
-            None => Self::handle_command(entries, &project, at, &now, &tags)?,
+            Ok(())
+        } else {
+            Err(anyhow::anyhow!("Invalid parameters"))
         }
-        Ok(())
     }
+}
 
+impl Start {
     fn handle_command(
         entries: &mut Entries,
         project: &str,

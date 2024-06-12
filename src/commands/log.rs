@@ -1,20 +1,18 @@
-use chrono::NaiveDate;
-
-use crate::commands::{date_or_max, date_or_min};
+use crate::commands::{Command, date_or_max, date_or_min, Invokable};
 use crate::storage::entries::Entries;
 
 pub(crate) struct Log;
 
-impl Log {
-    pub fn invoke(
-        entries: &Entries,
-        from: Option<NaiveDate>,
-        to: Option<NaiveDate>,
-    ) -> anyhow::Result<()> {
-        let from = date_or_min(from);
-        let to = date_or_max(to);
-        let entries = entries.get_in_range(from, to)?;
-        println!("{}", entries);
-        Ok(())
+impl Invokable for Log {
+    fn invoke(&self, entries: &mut Entries, params: Command) -> anyhow::Result<()> {
+        if let Command::Log { from, to } = params {
+            let from = date_or_min(from);
+            let to = date_or_max(to);
+            let entries = entries.get_in_range(from, to)?;
+            println!("{}", entries);
+            Ok(())
+        } else {
+            Err(anyhow::anyhow!("Invalid parameters"))
+        }
     }
 }

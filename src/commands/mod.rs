@@ -2,6 +2,7 @@ use chrono::{NaiveDate, NaiveTime};
 use clap_derive::{Args, Subcommand};
 
 use crate::Args;
+use crate::commands::Command::{Edit, Export, Log, Report, Start, Stop, Today};
 use crate::storage::entries::Entries;
 
 pub(crate) mod edit;
@@ -68,27 +69,62 @@ pub struct ExportArgs {
     #[arg(long)]
     csv: bool,
 }
+
+struct Invoker;
+
+impl Invoker {
+    pub fn invoke<C: Invokable>(
+        command: C,
+        entries: &mut Entries,
+        params: Command,
+    ) -> anyhow::Result<()> {
+        command.invoke(entries, params)
+    }
+}
+
+trait Invokable {
+    fn invoke(&self, entries: &mut Entries, params: Command) -> anyhow::Result<()>;
+}
+
 pub fn run(args: Args, entries: &mut Entries) -> anyhow::Result<()> {
     match args.command {
-        Command::Start { project, tags, at } => start::Start::invoke(entries, project, tags, at)?,
-        Command::Stop { at } => stop::Stop::invoke(entries, at)?,
-        Command::Log { from, to } => log::Log::invoke(entries, from, to)?,
-        Command::Report { from, to, project } => {
-            report::Report::invoke(entries, from, to, project)?
+        Start { project, tags, at } => {
+            Invoker::invoke(start::Start, entries, Start { project, tags, at })
         }
-        Command::Today => {
-            let today = chrono::Local::now().naive_local().date();
-            report::Report::invoke(entries, Some(today), Some(today), None)?
+        Stop { at } => Invoker::invoke(stop::Stop, entries, Stop { at }),
+        Log { from, to } => Invoker::invoke(log::Log, entries, Log { from, to }),
+        Report { from, to, project } => {
+            Invoker::invoke(report::Report, entries, Report { from, to, project })
         }
-        Command::Export {
+        Export {
             from,
             to,
             path,
             export_args,
-        } => export::Export::invoke(entries, from, to, path, export_args)?,
-        Command::Edit { hash } => edit::Edit::invoke(entries, hash)?,
-    };
-    Ok(())
+        } => Invoker::invoke(
+            export::Export,
+            entries,
+            Export {
+                from,
+                to,
+                path,
+                export_args,
+            },
+        ),
+        Edit { hash } => Invoker::invoke(edit::Edit, entries, Edit { hash }),
+        Today => {
+            let today = chrono::Local::now().naive_local().date();
+            Invoker::invoke(
+                report::Report,
+                entries,
+                Report {
+                    from: Some(today),
+                    to: Some(today),
+                    project: None,
+                },
+            )
+        }
+    }
 }
 
 fn parse_time(time_str: &str) -> anyhow::Result<NaiveTime, chrono::format::ParseError> {
