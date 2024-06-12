@@ -119,3 +119,18 @@ impl Start {
         tags
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_extract_tags() {
+        let tags = Some(vec!["+tag1".to_string(), "+tag2".to_string()]);
+        let extracted_tags = Start::extract_tags(tags);
+        assert_eq!(
+            extracted_tags,
+            Some(vec!["tag1".to_string(), "tag2".to_string()])
+        );
+    }
+}

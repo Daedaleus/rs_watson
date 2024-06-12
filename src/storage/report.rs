@@ -45,3 +45,18 @@ impl From<Entries> for ProjectEntry {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_report_from_project_entries() {
+        let project_entries = vec![ProjectEntry {
+            name: "default".to_string(),
+            entries: vec![],
+        }];
+        let report = Report::from(project_entries);
+        assert_eq!(report.projects.len(), 1);
+    }
+}

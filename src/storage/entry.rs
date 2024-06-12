@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::storage::gen_id;
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct Entry {
     id: String,
     project: String,
@@ -98,5 +98,60 @@ impl Display for Entry {
             self.project.bright_cyan(),
             tags.bright_cyan()
         )
+    }
+}
+
+#[cfg(test)]
+
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_get_project() {
+        let entry = Entry::new("project".into(), None, Utc::now(), None).unwrap();
+        assert_eq!(entry.get_project(), "project");
+    }
+
+    #[test]
+    fn test_get_tags() {
+        let tags = vec!["tag1".to_string(), "tag2".to_string()];
+        let entry = Entry::new("project".into(), Some(tags.clone()), Utc::now(), None).unwrap();
+        assert_eq!(entry.get_tags().unwrap(), tags);
+    }
+
+    #[test]
+    fn test_get_tags_as_string() {
+        let tags = vec!["tag1".to_string(), "tag2".to_string()];
+        let entry = Entry::new("project".into(), Some(tags.clone()), Utc::now(), None).unwrap();
+        assert_eq!(entry.get_tags_as_string(), "tag1, tag2");
+    }
+
+    #[test]
+    fn test_get_start() {
+        let start = Utc::now();
+        let entry = Entry::new("project".into(), None, start, None).unwrap();
+        assert_eq!(entry.get_start(), start);
+    }
+
+    #[test]
+    fn test_set_end() {
+        let start = Utc::now();
+        let mut entry = Entry::new("project".into(), None, start, None).unwrap();
+        let end = Utc::now();
+        entry.set_end(end);
+        assert_eq!(entry.end.unwrap(), end);
+    }
+
+    #[test]
+    fn test_is_running() {
+        let start = Utc::now();
+        let entry = Entry::new("project".into(), None, start, None).unwrap();
+        assert!(entry.is_running());
+    }
+
+    #[test]
+    fn test_get_id() {
+        let entry = Entry::new("project".into(), None, Utc::now(), None).unwrap();
+        assert_eq!(entry.get_id(), entry.id.to_string());
     }
 }

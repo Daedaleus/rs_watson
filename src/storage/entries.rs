@@ -31,7 +31,7 @@ impl Entries {
         }
     }
 
-    pub fn get_in_range(&self, from: NaiveDate, to: NaiveDate) -> anyhow::Result<Self> {
+    pub fn get_in_range(&self, from: NaiveDate, to: NaiveDate) -> Result<Self> {
         let entries = self
             .entries
             .iter()
@@ -77,7 +77,7 @@ impl Entries {
         println!("{}", report);
     }
 
-    pub fn get_unique_project(&self) -> anyhow::Result<String> {
+    pub fn get_unique_project(&self) -> Result<String> {
         let projects = self
             .entries
             .iter()
@@ -119,5 +119,87 @@ impl Display for Entries {
             writeln!(f, "{}", entry)?;
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_get_unique_project() {
+        let mut entries = Entries::default();
+        let entry = Entry::new("project".into(), None, Utc::now(), None).unwrap();
+        let entry2 = Entry::new("project".into(), None, Utc::now(), None).unwrap();
+        entries.push(entry);
+        entries.push(entry2);
+        let project = entries.get_unique_project().unwrap();
+        assert_eq!(project, "project");
+    }
+
+    #[test]
+    fn test_get_by_hash() {
+        let mut entries = Entries::default();
+        let entry = Entry::new("project".into(), None, Utc::now(), None).unwrap();
+        entries.push(entry.clone());
+        let found_entry = entries.get_by_hash(entry.get_id()).unwrap();
+        assert_eq!(found_entry, entry);
+    }
+
+    #[test]
+    fn test_get_last() {
+        let mut entries = Entries::default();
+        let entry = Entry::new("project".into(), None, Utc::now(), None).unwrap();
+        let entry2 = Entry::new("project".into(), None, Utc::now(), None).unwrap();
+        entries.push(entry.clone());
+        entries.push(entry2.clone());
+        let last_entry = entries.get_last().unwrap();
+        assert_eq!(last_entry, &entry2);
+    }
+
+    #[test]
+    fn test_filter_by_project() {
+        let mut entries = Entries::default();
+        let entry = Entry::new("project".into(), None, Utc::now(), None).unwrap();
+        let entry2 = Entry::new("project2".into(), None, Utc::now(), None).unwrap();
+        entries.push(entry.clone());
+        entries.push(entry2.clone());
+        let filtered_entries = entries.filter_by_project("project".into());
+        assert_eq!(filtered_entries.entries.len(), 1);
+        assert_eq!(filtered_entries.entries[0], entry);
+    }
+
+    #[test]
+    fn test_get_in_range() {
+        let mut entries = Entries::default();
+        let entry = Entry::new("project".into(), None, Utc::now(), None).unwrap();
+        let entry2 = Entry::new("project2".into(), None, Utc::now(), None).unwrap();
+        entries.push(entry.clone());
+        entries.push(entry2.clone());
+        let from = Utc::now().date_naive();
+        let to = Utc::now().date_naive();
+        let filtered_entries = entries.get_in_range(from, to).unwrap();
+        assert_eq!(filtered_entries.entries.len(), 2);
+    }
+
+    #[test]
+    fn test_get_entries() {
+        let mut entries = Entries::default();
+        let entry = Entry::new("project".into(), None, Utc::now(), None).unwrap();
+        let entry2 = Entry::new("project2".into(), None, Utc::now(), None).unwrap();
+        entries.push(entry.clone());
+        entries.push(entry2.clone());
+        let entries = entries.get_entries();
+        assert_eq!(entries.len(), 2);
+    }
+
+    #[test]
+    fn test_push() {
+        let mut entries = Entries::default();
+        let entry = Entry::new("project".into(), None, Utc::now(), None).unwrap();
+        entries.push(entry.clone());
+        let entries = entries.get_entries();
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0], entry);
     }
 }
