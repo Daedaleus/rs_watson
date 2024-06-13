@@ -1,22 +1,22 @@
 use anyhow::{Context, Error, Result};
+use clap_derive::Args;
 use inquire::Editor;
 use serde_json::json;
 
-use crate::commands::{Command, Invokable};
+use crate::commands::Invokable;
 use crate::storage::entries::Entries;
 use crate::storage::entry::Entry;
 
-pub(crate) struct Edit;
+#[derive(Args)]
+pub(crate) struct Edit {
+    hash: String,
+}
 
 impl Invokable for Edit {
-    fn invoke(&self, entries: &mut Entries, params: Command) -> Result<()> {
-        if let Command::Edit { hash } = params {
-            let entry = entries.get_by_hash(hash)?;
-            let new_entry = Self::edit_entry(entry)?;
-            entries.update(new_entry)
-        } else {
-            Err(anyhow::anyhow!("Invalid parameters"))
-        }
+    fn invoke(&self, entries: &mut Entries) -> Result<()> {
+        let entry = entries.get_by_hash(self.hash.clone())?;
+        let new_entry = Self::edit_entry(entry)?;
+        entries.update(new_entry)
     }
 }
 

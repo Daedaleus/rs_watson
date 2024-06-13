@@ -1,21 +1,24 @@
 use anyhow::{Context, Error};
 use chrono::{DateTime, Local, NaiveTime, TimeZone, Utc};
+use clap_derive::Args;
 use colored::Colorize;
 
-use crate::commands::{Command, Invokable};
+use crate::commands::parse_time;
+use crate::commands::Invokable;
 use crate::storage::entries::Entries;
 
-pub(crate) struct Stop;
+#[derive(Args)]
+pub struct Stop {
+    #[clap(short = 'a')]
+    #[arg(value_parser(parse_time))]
+    at: Option<NaiveTime>,
+}
 
 impl Invokable for Stop {
-    fn invoke(&self, entries: &mut Entries, params: Command) -> anyhow::Result<()> {
-        if let Command::Stop { at } = params {
-            let now = Local::now();
-            Self::handle_command(entries, at, now)?;
-            Ok(())
-        } else {
-            Err(anyhow::anyhow!("Invalid parameters"))
-        }
+    fn invoke(&self, entries: &mut Entries) -> anyhow::Result<()> {
+        let now = Local::now();
+        Self::handle_command(entries, self.at, now)?;
+        Ok(())
     }
 }
 
