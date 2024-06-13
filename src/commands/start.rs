@@ -3,6 +3,7 @@ use chrono::{DateTime, Local, NaiveTime, TimeZone, Utc};
 use clap_derive::Args;
 use colored::Colorize;
 
+use crate::commands::params::{Project, Tags};
 use crate::commands::parse_time;
 use crate::commands::Invokable;
 use crate::storage::entries::Entries;
@@ -10,8 +11,9 @@ use crate::storage::entry::Entry;
 
 #[derive(Args)]
 pub struct Start {
-    project: String,
-    tags: Option<Vec<String>>,
+    project: Project,
+    // #[clap(short = 't', value_parser = Tags::parse)]
+    tags: Option<Tags>,
     #[clap(short = 'a', value_parser = parse_time)]
     at: Option<NaiveTime>,
 }
@@ -19,17 +21,17 @@ pub struct Start {
 impl Invokable for Start {
     fn invoke(&self, entries: &mut Entries) -> anyhow::Result<()> {
         let now = Local::now();
-        let tags = Self::extract_tags(self.tags.clone());
+        let tags = self.tags.clone();
         match entries.get_last() {
             Some(entry) => {
                 if entry.is_running() {
                     crate::commands::stop::Stop::handle_command(entries, self.at, now)?;
-                    Self::handle_command(entries, &self.project, self.at, &now, &tags)?;
+                    Self::handle_command(entries, self.project.clone(), self.at, &now, &tags)?;
                 } else {
-                    Self::handle_command(entries, &self.project, self.at, &now, &tags)?
+                    Self::handle_command(entries, self.project.clone(), self.at, &now, &tags)?
                 }
             }
-            None => Self::handle_command(entries, &self.project, self.at, &now, &tags)?,
+            None => Self::handle_command(entries, self.project.clone(), self.at, &now, &tags)?,
         }
         Ok(())
     }
@@ -38,10 +40,10 @@ impl Invokable for Start {
 impl Start {
     fn handle_command(
         entries: &mut Entries,
-        project: &str,
+        project: Project,
         at: Option<NaiveTime>,
         now: &DateTime<Local>,
-        tags: &Option<Vec<String>>,
+        tags: &Option<Tags>,
     ) -> Result<(), Error> {
         match at {
             Some(at) => {
@@ -56,14 +58,14 @@ impl Start {
 
     fn without_start(
         entries: &mut Entries,
-        project: impl Into<String>,
+        project: Project,
         now: &DateTime<Local>,
-        tags: Option<Vec<String>>,
+        tags: Option<Tags>,
     ) -> Result<(), Error> {
         let start = Local.from_local_datetime(&now.naive_local()).unwrap();
         let start = start.with_timezone(&Utc);
 
-        let entry = Entry::new(project.into(), tags, start, None)?;
+        let entry = Entry::new(project, tags, start, None)?;
 
         println!(
             "Start logging of project {} with tags {} at {}",
@@ -72,7 +74,7 @@ impl Start {
                 .get_tags()
                 .clone()
                 .unwrap_or_default()
-                .join(", ")
+                .as_string()
                 .bright_green(),
             entry
                 .get_start()
@@ -89,16 +91,16 @@ impl Start {
 
     fn with_start(
         entries: &mut Entries,
-        project: &str,
+        project: Project,
         now: &DateTime<Local>,
-        tags: &Option<Vec<String>>,
+        tags: &Option<Tags>,
         at: NaiveTime,
     ) -> Result<(), Error> {
         let start = now.date_naive().and_time(at);
         let start = Local.from_local_datetime(&start).unwrap();
         let start = start.with_timezone(&Utc);
 
-        let entry = Entry::new(project.into(), tags.clone(), start, None)?;
+        let entry = Entry::new(project, tags.clone(), start, None)?;
         println!(
             "Start logging of project {} with tags {} at {}",
             entry.get_project().clone().cyan(),
@@ -106,35 +108,11 @@ impl Start {
                 .get_tags()
                 .clone()
                 .unwrap_or_default()
-                .join(", ")
+                .as_string()
                 .green(),
             entry.get_start().clone()
         );
         entries.push(entry);
         Ok(())
-    }
-
-    fn extract_tags(tags: Option<Vec<String>>) -> Option<Vec<String>> {
-        let tags = tags.map(|tags| {
-            tags.iter()
-                .map(|tag| tag.trim_start_matches('+').to_string())
-                .collect()
-        });
-        tags
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::commands::start::Start;
-
-    #[test]
-    fn test_extract_tags() {
-        let tags = Some(vec!["+tag1".to_string(), "+tag2".to_string()]);
-        let extracted_tags = Start::extract_tags(tags);
-        assert_eq!(
-            extracted_tags,
-            Some(vec!["tag1".to_string(), "tag2".to_string()])
-        );
     }
 }

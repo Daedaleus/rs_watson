@@ -15,6 +15,7 @@ use crate::Args;
 pub(crate) mod edit;
 pub(crate) mod export;
 pub(crate) mod log;
+pub(crate) mod params;
 pub(crate) mod report;
 pub(crate) mod start;
 pub(crate) mod stop;

@@ -5,13 +5,14 @@ use chrono::{DateTime, Utc};
 use colored::Colorize;
 use serde::{Deserialize, Serialize};
 
+use crate::commands::params::{Project, Tags};
 use crate::storage::gen_id;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct Entry {
     id: String,
-    project: String,
-    tags: Option<Vec<String>>,
+    project: Project,
+    tags: Option<Tags>,
     start: DateTime<Utc>,
     #[serde(default)]
     end: Option<DateTime<Utc>>,
@@ -19,8 +20,8 @@ pub struct Entry {
 
 impl Entry {
     pub fn new(
-        project: String,
-        tags: Option<Vec<String>>,
+        project: Project,
+        tags: Option<Tags>,
         start: DateTime<Utc>,
         end: Option<DateTime<Utc>>,
     ) -> anyhow::Result<Self> {
@@ -35,7 +36,7 @@ impl Entry {
     }
 
     pub fn print_report(&self) -> anyhow::Result<String> {
-        let tags = self.tags.clone().unwrap_or_default().join(", ");
+        let tags = self.tags.clone().unwrap_or_default().as_string();
         let duration = self.get_duration_as_human_readable()?;
         Ok(format!("[{}   {}]", tags.bright_cyan(), duration.cyan()))
     }
@@ -52,16 +53,12 @@ impl Entry {
         Ok(format!("{:02}:{:02}", hours, minutes))
     }
 
-    pub fn get_project(&self) -> String {
+    pub fn get_project(&self) -> Project {
         self.project.clone()
     }
 
-    pub fn get_tags(&self) -> Option<Vec<String>> {
+    pub fn get_tags(&self) -> Option<Tags> {
         self.tags.clone()
-    }
-
-    pub fn get_tags_as_string(&self) -> String {
-        self.tags.clone().unwrap_or_default().join(", ")
     }
 
     pub fn get_start(&self) -> DateTime<Utc> {
@@ -83,7 +80,7 @@ impl Entry {
 
 impl Display for Entry {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let tags = self.tags.clone().unwrap_or_default().join(", ");
+        let tags = self.tags.clone().unwrap_or_default().as_string();
         let id = &self.id[..8];
         let end = match self.end {
             Some(end) => end.format("%H:%M").to_string(),
@@ -107,22 +104,15 @@ mod tests {
 
     #[test]
     fn test_get_project() {
-        let entry = Entry::new("project".into(), None, Utc::now(), None).unwrap();
-        assert_eq!(entry.get_project(), "project");
+        let entry = Entry::new(Project::new("project"), None, Utc::now(), None).unwrap();
+        assert_eq!(entry.get_project(), Project::new("project"));
     }
 
     #[test]
     fn test_get_tags() {
-        let tags = vec!["tag1".to_string(), "tag2".to_string()];
+        let tags = Tags::parse("tag1,tag2").unwrap();
         let entry = Entry::new("project".into(), Some(tags.clone()), Utc::now(), None).unwrap();
         assert_eq!(entry.get_tags().unwrap(), tags);
-    }
-
-    #[test]
-    fn test_get_tags_as_string() {
-        let tags = vec!["tag1".to_string(), "tag2".to_string()];
-        let entry = Entry::new("project".into(), Some(tags.clone()), Utc::now(), None).unwrap();
-        assert_eq!(entry.get_tags_as_string(), "tag1, tag2");
     }
 
     #[test]

@@ -1,6 +1,7 @@
 use chrono::NaiveDate;
 use clap_derive::Args;
 
+use crate::commands::params::Project;
 use crate::commands::{date_or_max, date_or_min, parse_date, Invokable};
 use crate::storage::entries::Entries;
 
@@ -13,7 +14,7 @@ pub(crate) struct Report {
     #[arg(value_parser(parse_date))]
     to: Option<NaiveDate>,
     #[clap(short = 'p')]
-    project: Option<String>,
+    project: Option<Project>,
 }
 
 impl Invokable for Report {
@@ -31,7 +32,7 @@ impl Invokable for Report {
 }
 
 impl Report {
-    pub fn new(from: Option<NaiveDate>, to: Option<NaiveDate>, project: Option<String>) -> Self {
+    pub fn new(from: Option<NaiveDate>, to: Option<NaiveDate>, project: Option<Project>) -> Self {
         Self { from, to, project }
     }
 }

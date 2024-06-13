@@ -6,6 +6,7 @@ use chrono::{DateTime, NaiveDate, Utc};
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 
+use crate::commands::params::Project;
 use crate::storage::entry::Entry;
 use crate::storage::report::{ProjectEntry, Report};
 
@@ -43,7 +44,7 @@ impl Entries {
         Ok(Entries { entries })
     }
 
-    pub fn filter_by_project(&self, project: String) -> Self {
+    pub fn filter_by_project(&self, project: Project) -> Self {
         let entries = self
             .entries
             .iter()
@@ -58,11 +59,11 @@ impl Entries {
             .entries
             .iter()
             .map(|entry| entry.get_project())
-            .collect::<Vec<String>>();
+            .collect::<Vec<Project>>();
 
-        let mut project_entries = HashMap::new();
+        let mut project_entries: HashMap<Project, Entries> = HashMap::new();
         for project in projects {
-            let entries = self.filter_by_project(project.to_string());
+            let entries = self.filter_by_project(project.clone());
             project_entries.insert(project, entries);
         }
 
@@ -77,15 +78,15 @@ impl Entries {
         println!("{}", report);
     }
 
-    pub fn get_unique_project(&self) -> Result<String> {
-        let projects = self
+    pub fn get_unique_project(&self) -> Result<Project> {
+        let projects: Vec<Project> = self
             .entries
             .iter()
             .map(|entry| entry.get_project())
             .unique()
-            .collect::<Vec<String>>();
+            .collect();
         anyhow::ensure!(projects.len() == 1, "More than one project found");
-        Ok(projects[0].to_string())
+        Ok(projects[0].clone())
     }
 
     pub fn get_last(&self) -> Option<&Entry> {
@@ -134,7 +135,7 @@ mod tests {
         entries.push(entry);
         entries.push(entry2);
         let project = entries.get_unique_project().unwrap();
-        assert_eq!(project, "project");
+        assert_eq!(project, Project::new("project"));
     }
 
     #[test]

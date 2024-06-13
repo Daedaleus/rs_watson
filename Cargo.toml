@@ -20,6 +20,7 @@ toml = "0.8.14"
 inquire = { version = "0.7.5", features = ["editor"] }
 directories = "5.0.1"
 enum_dispatch = "0.3.13"
+derive_more = { version = "1.0.0-beta.6", features = ["deref", "deref_mut", "into", "into_iterator"] }
 
 [profile.release]
 lto = true

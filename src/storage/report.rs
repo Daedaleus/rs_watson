@@ -22,7 +22,7 @@ impl Display for Report {
             for entry in &project.entries {
                 let report = entry
                     .print_report()
-                    .unwrap_or_else(|_| format!("[{:?}]", entry.get_tags_as_string()));
+                    .unwrap_or_else(|_| format!("[{:?}]", entry.get_tags().unwrap().as_string()));
                 writeln!(f, "   {}", report)?;
             }
             writeln!(f)?;
@@ -40,7 +40,7 @@ impl From<Entries> for ProjectEntry {
     fn from(entries: Entries) -> Self {
         let project = entries.get_unique_project().unwrap();
         ProjectEntry {
-            name: project,
+            name: project.to_string(),
             entries: entries.get_entries(),
         }
     }
