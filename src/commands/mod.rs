@@ -1,7 +1,14 @@
 use chrono::{NaiveDate, NaiveTime};
 use clap_derive::{Args, Subcommand};
+use enum_dispatch::enum_dispatch;
 
-use crate::commands::Command::{Edit, Export, Log, Report, Start, Stop, Today};
+use crate::commands::edit::Edit;
+use crate::commands::export::Export;
+use crate::commands::log::Log;
+use crate::commands::report::Report;
+use crate::commands::start::Start;
+use crate::commands::stop::Stop;
+use crate::commands::today::Today;
 use crate::storage::entries::Entries;
 use crate::Args;
 
@@ -11,56 +18,19 @@ pub(crate) mod log;
 pub(crate) mod report;
 pub(crate) mod start;
 pub(crate) mod stop;
+pub(crate) mod today;
 
+#[enum_dispatch(Invokable)]
 #[derive(Subcommand)]
 pub enum Command {
     #[clap(name = "start", about = "Start logging")]
-    Start {
-        project: String,
-        tags: Option<Vec<String>>,
-        #[clap(short = 'a')]
-        #[arg(value_parser(parse_time))]
-        at: Option<NaiveTime>,
-    },
-    Log {
-        #[clap(short = 'f')]
-        #[arg(value_parser(parse_date))]
-        from: Option<NaiveDate>,
-        #[clap(short = 't')]
-        #[arg(value_parser(parse_date))]
-        to: Option<NaiveDate>,
-    },
-    Stop {
-        #[clap(short = 'a')]
-        #[arg(value_parser(parse_time))]
-        at: Option<NaiveTime>,
-    },
-    Report {
-        #[clap(short = 'f')]
-        #[arg(value_parser(parse_date))]
-        from: Option<NaiveDate>,
-        #[clap(short = 't')]
-        #[arg(value_parser(parse_date))]
-        to: Option<NaiveDate>,
-        #[clap(short = 'p')]
-        project: Option<String>,
-    },
-    Today,
-    Export {
-        #[clap(short = 'f')]
-        #[arg(value_parser(parse_date))]
-        from: Option<NaiveDate>,
-        #[clap(short = 't')]
-        #[arg(value_parser(parse_date))]
-        to: Option<NaiveDate>,
-        #[clap(short = 'o')]
-        path: String,
-        #[command(flatten)]
-        export_args: ExportArgs,
-    },
-    Edit {
-        hash: String,
-    },
+    Start(Start),
+    Log(Log),
+    Stop(Stop),
+    Report(Report),
+    Today(Today),
+    Export(Export),
+    Edit(Edit),
 }
 
 #[derive(Args)]
@@ -70,64 +40,16 @@ pub struct ExportArgs {
     csv: bool,
 }
 
-struct Invoker;
-
-impl Invoker {
-    pub fn invoke<C: Invokable>(
-        command: C,
-        entries: &mut Entries,
-        params: Command,
-    ) -> anyhow::Result<()> {
-        command.invoke(entries, params)
-    }
-}
-
+#[enum_dispatch]
 trait Invokable {
-    fn invoke(&self, entries: &mut Entries, params: Command) -> anyhow::Result<()>;
+    fn invoke(&self, entries: &mut Entries) -> anyhow::Result<()>;
 }
 
 pub fn run(args: Args, entries: &mut Entries) -> anyhow::Result<()> {
-    match args.command {
-        Start { project, tags, at } => {
-            Invoker::invoke(start::Start, entries, Start { project, tags, at })
-        }
-        Stop { at } => Invoker::invoke(stop::Stop, entries, Stop { at }),
-        Log { from, to } => Invoker::invoke(log::Log, entries, Log { from, to }),
-        Report { from, to, project } => {
-            Invoker::invoke(report::Report, entries, Report { from, to, project })
-        }
-        Export {
-            from,
-            to,
-            path,
-            export_args,
-        } => Invoker::invoke(
-            export::Export,
-            entries,
-            Export {
-                from,
-                to,
-                path,
-                export_args,
-            },
-        ),
-        Edit { hash } => Invoker::invoke(edit::Edit, entries, Edit { hash }),
-        Today => {
-            let today = chrono::Local::now().naive_local().date();
-            Invoker::invoke(
-                report::Report,
-                entries,
-                Report {
-                    from: Some(today),
-                    to: Some(today),
-                    project: None,
-                },
-            )
-        }
-    }
+    args.command.invoke(entries)
 }
 
-fn parse_time(time_str: &str) -> anyhow::Result<NaiveTime, chrono::format::ParseError> {
+pub fn parse_time(time_str: &str) -> anyhow::Result<NaiveTime, chrono::format::ParseError> {
     NaiveTime::parse_from_str(time_str, "%H:%M:%S")
 }
 

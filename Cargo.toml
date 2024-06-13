@@ -19,6 +19,7 @@ colored = "2.1.0"
 toml = "0.8.14"
 inquire = { version = "0.7.5", features = ["editor"] }
 directories = "5.0.1"
+enum_dispatch = "0.3.13"
 
 [profile.release]
 lto = true

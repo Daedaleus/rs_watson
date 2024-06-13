@@ -1,33 +1,37 @@
 use anyhow::Error;
 use chrono::{DateTime, Local, NaiveTime, TimeZone, Utc};
+use clap_derive::Args;
 use colored::Colorize;
 
-use crate::commands::{Command, Invokable};
+use crate::commands::parse_time;
+use crate::commands::Invokable;
 use crate::storage::entries::Entries;
 use crate::storage::entry::Entry;
 
-pub(crate) struct Start;
+#[derive(Args)]
+pub struct Start {
+    project: String,
+    tags: Option<Vec<String>>,
+    #[clap(short = 'a', value_parser = parse_time)]
+    at: Option<NaiveTime>,
+}
 
 impl Invokable for Start {
-    fn invoke(&self, entries: &mut Entries, params: Command) -> anyhow::Result<()> {
-        if let Command::Start { project, tags, at } = params {
-            let now = Local::now();
-            let tags = Self::extract_tags(tags);
-            match entries.get_last() {
-                Some(entry) => {
-                    if entry.is_running() {
-                        crate::commands::stop::Stop::handle_command(entries, at, now)?;
-                        Self::handle_command(entries, &project, at, &now, &tags)?;
-                    } else {
-                        Self::handle_command(entries, &project, at, &now, &tags)?
-                    }
+    fn invoke(&self, entries: &mut Entries) -> anyhow::Result<()> {
+        let now = Local::now();
+        let tags = Self::extract_tags(self.tags.clone());
+        match entries.get_last() {
+            Some(entry) => {
+                if entry.is_running() {
+                    crate::commands::stop::Stop::handle_command(entries, self.at, now)?;
+                    Self::handle_command(entries, &self.project, self.at, &now, &tags)?;
+                } else {
+                    Self::handle_command(entries, &self.project, self.at, &now, &tags)?
                 }
-                None => Self::handle_command(entries, &project, at, &now, &tags)?,
             }
-            Ok(())
-        } else {
-            Err(anyhow::anyhow!("Invalid parameters"))
+            None => Self::handle_command(entries, &self.project, self.at, &now, &tags)?,
         }
+        Ok(())
     }
 }
 
@@ -122,7 +126,7 @@ impl Start {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::commands::start::Start;
 
     #[test]
     fn test_extract_tags() {
