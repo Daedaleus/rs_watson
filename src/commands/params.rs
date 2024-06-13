@@ -59,7 +59,7 @@ impl From<String> for Tags {
 }
 impl Tags {
     pub fn new(tags: Vec<Tag>) -> Self {
-        assert!(!tags.is_empty());
+        assert!(!tags.is_empty(), "Tags cannot be empty");
         Self(tags)
     }
 
