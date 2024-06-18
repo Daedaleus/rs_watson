@@ -179,7 +179,7 @@ mod tests {
         entries.push(entry2.clone());
         let from = Utc::now().date_naive();
         let to = Utc::now().date_naive();
-        let filtered_entries = entries.get_in_range(from, to).unwrap();
+        let filtered_entries = entries.get_in_range(from.into(), to).unwrap();
         assert_eq!(filtered_entries.entries.len(), 2);
     }
 

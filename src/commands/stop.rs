@@ -1,8 +1,9 @@
 use anyhow::{Context, Error};
-use chrono::{DateTime, Local, NaiveTime, TimeZone, Utc};
+use chrono::{DateTime, Local, TimeZone, Utc};
 use clap_derive::Args;
 use colored::Colorize;
 
+use crate::commands::params::At;
 use crate::commands::parse_time;
 use crate::commands::Invokable;
 use crate::storage::entries::Entries;
@@ -11,13 +12,13 @@ use crate::storage::entries::Entries;
 pub struct Stop {
     #[clap(short = 'a')]
     #[arg(value_parser(parse_time))]
-    at: Option<NaiveTime>,
+    at: Option<At>,
 }
 
 impl Invokable for Stop {
     fn invoke(&self, entries: &mut Entries) -> anyhow::Result<()> {
         let now = Local::now();
-        Self::handle_command(entries, self.at, now)?;
+        Self::handle_command(entries, self.at.clone(), now)?;
         Ok(())
     }
 }
@@ -25,7 +26,7 @@ impl Invokable for Stop {
 impl Stop {
     pub fn handle_command(
         entries: &mut Entries,
-        at: Option<NaiveTime>,
+        at: Option<At>,
         now: DateTime<Local>,
     ) -> Result<(), Error> {
         println!(
@@ -34,7 +35,7 @@ impl Stop {
         );
         let end = match at {
             Some(at) => {
-                let end = now.date_naive().and_time(at);
+                let end = now.date_naive().and_time(at.into());
                 let end = Local.from_local_datetime(&end).unwrap();
                 let end = end.with_timezone(&Utc);
                 Some(end)

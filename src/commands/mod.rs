@@ -58,14 +58,6 @@ fn parse_date(date_str: &str) -> anyhow::Result<NaiveDate, chrono::format::Parse
     NaiveDate::parse_from_str(date_str, "%Y-%m-%d")
 }
 
-fn date_or_min(date: Option<NaiveDate>) -> NaiveDate {
-    date.unwrap_or_else(|| NaiveDate::from_ymd_opt(1970, 1, 1).unwrap())
-}
-
-fn date_or_max(date: Option<NaiveDate>) -> NaiveDate {
-    date.unwrap_or_else(|| NaiveDate::from_ymd_opt(9999, 12, 31).unwrap())
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -85,30 +77,6 @@ mod tests {
     #[test]
     fn test_parse_date() {
         let date = parse_date("2021-01-01").unwrap();
-        assert_eq!(date, NaiveDate::from_ymd_opt(2021, 1, 1).unwrap());
-    }
-
-    #[test]
-    fn test_date_or_min() {
-        let date = date_or_min(None);
-        assert_eq!(date, NaiveDate::from_ymd_opt(1970, 1, 1).unwrap());
-    }
-
-    #[test]
-    fn test_date_or_max() {
-        let date = date_or_max(None);
-        assert_eq!(date, NaiveDate::from_ymd_opt(9999, 12, 31).unwrap());
-    }
-
-    #[test]
-    fn test_date_or_min_with_date() {
-        let date = date_or_min(Some(NaiveDate::from_ymd_opt(2021, 1, 1).unwrap()));
-        assert_eq!(date, NaiveDate::from_ymd_opt(2021, 1, 1).unwrap());
-    }
-
-    #[test]
-    fn test_date_or_max_with_date() {
-        let date = date_or_max(Some(NaiveDate::from_ymd_opt(2021, 1, 1).unwrap()));
         assert_eq!(date, NaiveDate::from_ymd_opt(2021, 1, 1).unwrap());
     }
 }
