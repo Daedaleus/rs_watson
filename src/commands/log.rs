@@ -1,7 +1,8 @@
 use chrono::NaiveDate;
 use clap_derive::Args;
 
-use crate::commands::{date_or_max, date_or_min, parse_date, Invokable};
+use crate::commands::params::{FromDate, ToDate};
+use crate::commands::{parse_date, Invokable};
 use crate::storage::entries::Entries;
 
 #[derive(Args)]
@@ -16,8 +17,8 @@ pub struct Log {
 
 impl Invokable for Log {
     fn invoke(&self, entries: &mut Entries) -> anyhow::Result<()> {
-        let from = date_or_min(self.from);
-        let to = date_or_max(self.to);
+        let from = FromDate::from(self.from).or_min();
+        let to = ToDate::from(self.to).or_max();
         let entries = entries.get_in_range(from, to)?;
         println!("{}", entries);
         Ok(())

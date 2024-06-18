@@ -1,3 +1,4 @@
+use chrono::{NaiveDate, NaiveTime};
 use derive_more::{Deref, Into, IntoIterator};
 use serde::{Deserialize, Serialize};
 
@@ -76,5 +77,63 @@ impl Tags {
             .map(|tag| tag.to_string())
             .collect::<Vec<String>>()
             .join(", ")
+    }
+}
+
+#[derive(Deref, Clone)]
+pub struct At(NaiveTime);
+
+impl From<NaiveTime> for At {
+    fn from(at: NaiveTime) -> Self {
+        At(at)
+    }
+}
+
+#[allow(clippy::from_over_into)]
+impl Into<NaiveTime> for At {
+    fn into(self) -> NaiveTime {
+        self.0
+    }
+}
+
+#[derive(Deref, Clone, PartialEq, PartialOrd)]
+pub struct FromDate(Option<NaiveDate>);
+
+impl From<Option<NaiveDate>> for FromDate {
+    fn from(from: Option<NaiveDate>) -> Self {
+        FromDate(from)
+    }
+}
+
+impl From<NaiveDate> for FromDate {
+    fn from(from: NaiveDate) -> Self {
+        FromDate(Some(from))
+    }
+}
+
+impl FromDate {
+    pub fn or_min(&self) -> NaiveDate {
+        self.unwrap_or_else(|| NaiveDate::from_ymd_opt(1970, 1, 1).unwrap())
+    }
+}
+
+#[derive(Deref, Clone, PartialEq, PartialOrd)]
+pub struct ToDate(Option<NaiveDate>);
+
+impl From<Option<NaiveDate>> for ToDate {
+    fn from(to: Option<NaiveDate>) -> Self {
+        ToDate(to)
+    }
+}
+
+impl From<NaiveDate> for ToDate {
+    fn from(to: NaiveDate) -> Self {
+        ToDate(Some(to))
+    }
+}
+
+impl ToDate {
+    pub fn or_max(&self) -> NaiveDate {
+        self.unwrap_or_else(|| NaiveDate::from_ymd_opt(9999, 12, 31).unwrap())
     }
 }

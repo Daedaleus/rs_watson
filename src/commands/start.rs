@@ -1,9 +1,9 @@
 use anyhow::Error;
-use chrono::{DateTime, Local, NaiveTime, TimeZone, Utc};
+use chrono::{DateTime, Local, TimeZone, Utc};
 use clap_derive::Args;
 use colored::Colorize;
 
-use crate::commands::params::{Project, Tags};
+use crate::commands::params::{At, Project, Tags};
 use crate::commands::parse_time;
 use crate::commands::Invokable;
 use crate::storage::entries::Entries;
@@ -12,10 +12,9 @@ use crate::storage::entry::Entry;
 #[derive(Args)]
 pub struct Start {
     project: Project,
-    // #[clap(short = 't', value_parser = Tags::parse)]
     tags: Option<Tags>,
     #[clap(short = 'a', value_parser = parse_time)]
-    at: Option<NaiveTime>,
+    at: Option<At>,
 }
 
 impl Invokable for Start {
@@ -25,13 +24,27 @@ impl Invokable for Start {
         match entries.get_last() {
             Some(entry) => {
                 if entry.is_running() {
-                    crate::commands::stop::Stop::handle_command(entries, self.at, now)?;
-                    Self::handle_command(entries, self.project.clone(), self.at, &now, &tags)?;
+                    crate::commands::stop::Stop::handle_command(entries, self.at.clone(), now)?;
+                    Self::handle_command(
+                        entries,
+                        self.project.clone(),
+                        self.at.clone(),
+                        &now,
+                        &tags,
+                    )?;
                 } else {
-                    Self::handle_command(entries, self.project.clone(), self.at, &now, &tags)?
+                    Self::handle_command(
+                        entries,
+                        self.project.clone(),
+                        self.at.clone(),
+                        &now,
+                        &tags,
+                    )?
                 }
             }
-            None => Self::handle_command(entries, self.project.clone(), self.at, &now, &tags)?,
+            None => {
+                Self::handle_command(entries, self.project.clone(), self.at.clone(), &now, &tags)?
+            }
         }
         Ok(())
     }
@@ -41,7 +54,7 @@ impl Start {
     fn handle_command(
         entries: &mut Entries,
         project: Project,
-        at: Option<NaiveTime>,
+        at: Option<At>,
         now: &DateTime<Local>,
         tags: &Option<Tags>,
     ) -> Result<(), Error> {
@@ -94,9 +107,9 @@ impl Start {
         project: Project,
         now: &DateTime<Local>,
         tags: &Option<Tags>,
-        at: NaiveTime,
+        at: At,
     ) -> Result<(), Error> {
-        let start = now.date_naive().and_time(at);
+        let start = now.date_naive().and_time(at.into());
         let start = Local.from_local_datetime(&start).unwrap();
         let start = start.with_timezone(&Utc);
 
