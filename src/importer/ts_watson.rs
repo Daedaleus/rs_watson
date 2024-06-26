@@ -1,16 +1,17 @@
-use std::{fs};
+use std::fs;
 use std::path::Path;
+
 use anyhow::Error;
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
 pub struct TdWatsonFrame {
-    start_time: Option<i64>,
-    end_time: Option<i64>,
-    project: Option<String>,
-    id: Option<String>,
-    tags: Option<Vec<String>>,
-    timestamp: Option<i64>,
+    pub(crate) start_time: Option<i64>,
+    pub(crate) end_time: Option<i64>,
+    pub(crate) project: Option<String>,
+    _id: Option<String>,
+    pub(crate) tags: Option<Vec<String>>,
+    _timestamp: Option<i64>,
 }
 
 impl TdWatsonFrame {
@@ -20,7 +21,8 @@ impl TdWatsonFrame {
     }
 
     fn parse(content: String) -> Result<Vec<TdWatsonFrame>, Error> {
-        let objects: Vec<TdWatsonFrame> = serde_json::from_str(&content).expect("Failed to parse JSON");
+        let objects: Vec<TdWatsonFrame> =
+            serde_json::from_str(&content).expect("Failed to parse JSON");
         Ok(objects)
     }
 }

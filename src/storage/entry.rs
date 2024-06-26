@@ -1,11 +1,12 @@
 use std::fmt::Display;
 
 use anyhow::Context;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, TimeZone, Utc};
 use colored::Colorize;
 use serde::{Deserialize, Serialize};
 
 use crate::commands::params::{Project, Tags};
+use crate::importer::ts_watson::TdWatsonFrame;
 use crate::storage::gen_id;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -95,6 +96,22 @@ impl Display for Entry {
             self.project.bright_cyan(),
             tags.bright_cyan()
         )
+    }
+}
+
+impl From<TdWatsonFrame> for Entry {
+    fn from(imported_frame: TdWatsonFrame) -> Self {
+        let project = Project::new(imported_frame.project.unwrap());
+        let tags = Tags::parse(
+            &imported_frame
+                .tags
+                .map(|tags| tags.join(","))
+                .unwrap_or_default(),
+        )
+        .unwrap();
+        let start = Utc.timestamp_opt(imported_frame.start_time.unwrap(), 0);
+        let end = Utc.timestamp_opt(imported_frame.end_time.unwrap(), 0);
+        Self::new(project, Some(tags), start.unwrap(), Some(end.unwrap())).unwrap()
     }
 }
 

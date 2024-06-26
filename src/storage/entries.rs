@@ -126,9 +126,10 @@ impl Display for Entries {
 
 impl From<Vec<TdWatsonFrame>> for Entries {
     fn from(imported_frames: Vec<TdWatsonFrame>) -> Self {
-        let entries = Self::default();
+        let mut entries = Self::default();
         for imported_frame in imported_frames {
-            todo!()
+            let entry = Entry::from(imported_frame);
+            entries.push(entry);
         }
         entries
     }

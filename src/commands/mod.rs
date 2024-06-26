@@ -4,6 +4,7 @@ use enum_dispatch::enum_dispatch;
 
 use crate::commands::edit::Edit;
 use crate::commands::export::Export;
+use crate::commands::import::Import;
 use crate::commands::log::Log;
 use crate::commands::report::Report;
 use crate::commands::start::Start;
@@ -11,17 +12,16 @@ use crate::commands::stop::Stop;
 use crate::commands::today::Today;
 use crate::storage::entries::Entries;
 use crate::Args;
-use crate::commands::import::Import;
 
 pub(crate) mod edit;
 pub(crate) mod export;
+pub(crate) mod import;
 pub(crate) mod log;
 pub(crate) mod params;
 pub(crate) mod report;
 pub(crate) mod start;
 pub(crate) mod stop;
 pub(crate) mod today;
-pub(crate) mod import;
 
 #[enum_dispatch(Invokable)]
 #[derive(Subcommand)]
@@ -34,7 +34,7 @@ pub enum Command {
     Today(Today),
     Export(Export),
     Edit(Edit),
-    Import(Import)
+    Import(Import),
 }
 
 #[derive(Args)]

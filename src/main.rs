@@ -13,8 +13,8 @@ use crate::storage::get_or_create_file;
 mod commands;
 mod config;
 mod exporter;
-mod storage;
 mod importer;
+mod storage;
 
 fn main() -> Result<()> {
     let args = Args::parse();
