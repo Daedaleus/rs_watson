@@ -29,7 +29,7 @@ impl TdWatsonFrame {
 
 #[cfg(test)]
 mod tests {
-    use crate::importer::ts_watson::{TdWatsonFrame, TdWatsonFrame::parse};
+    use crate::importer::ts_watson::TdWatsonFrame;
 
     #[test]
     fn test() {
@@ -39,5 +39,6 @@ mod tests {
             [ null, 1658217600, "proja", "45352e42521242f6babebecfc104bad5", ["tagb"], 1658225019 ]
             ]"#;
         let result = TdWatsonFrame::parse(data.to_string());
+        assert!(result.is_ok());
     }
 }
