@@ -7,6 +7,7 @@ use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 
 use crate::commands::params::Project;
+use crate::importer::ts_watson::TdWatsonFrame;
 use crate::storage::entry::Entry;
 use crate::storage::report::{ProjectEntry, Report};
 
@@ -120,6 +121,17 @@ impl Display for Entries {
             writeln!(f, "{}", entry)?;
         }
         Ok(())
+    }
+}
+
+impl From<Vec<TdWatsonFrame>> for Entries {
+    fn from(imported_frames: Vec<TdWatsonFrame>) -> Self {
+        let mut entries = Self::default();
+        for imported_frame in imported_frames {
+            let entry = Entry::from(imported_frame);
+            entries.push(entry);
+        }
+        entries
     }
 }
 
