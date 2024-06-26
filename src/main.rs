@@ -14,6 +14,7 @@ mod commands;
 mod config;
 mod exporter;
 mod storage;
+mod importer;
 
 fn main() -> Result<()> {
     let args = Args::parse();
