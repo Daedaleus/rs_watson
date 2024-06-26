@@ -4,7 +4,7 @@ use anyhow::Error;
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
-struct TdWatsonFrame {
+pub struct TdWatsonFrame {
     start_time: Option<i64>,
     end_time: Option<i64>,
     project: Option<String>,
@@ -13,19 +13,21 @@ struct TdWatsonFrame {
     timestamp: Option<i64>,
 }
 
-fn from_file(path: impl AsRef<Path>) -> Result<Vec<TdWatsonFrame>, Error> {
-    let data = fs::read_to_string(path).expect("Unable to read file");
-    parse(data)
-}
+impl TdWatsonFrame {
+    pub fn from_file(path: impl AsRef<Path>) -> Result<Vec<TdWatsonFrame>, Error> {
+        let data = fs::read_to_string(path).expect("Unable to read file");
+        Self::parse(data)
+    }
 
-fn parse(content: String) -> Result<Vec<TdWatsonFrame>, Error> {
-    let objects: Vec<TdWatsonFrame> = serde_json::from_str(&content).expect("Failed to parse JSON");
-    Ok(objects)
+    fn parse(content: String) -> Result<Vec<TdWatsonFrame>, Error> {
+        let objects: Vec<TdWatsonFrame> = serde_json::from_str(&content).expect("Failed to parse JSON");
+        Ok(objects)
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::importer::ts_watson::{parse};
+    use crate::importer::ts_watson::{TdWatsonFrame, TdWatsonFrame::parse};
 
     #[test]
     fn test() {
@@ -34,6 +36,6 @@ mod tests {
             [ null, null, "", "", [], null ],
             [ null, 1658217600, "proja", "45352e42521242f6babebecfc104bad5", ["tagb"], 1658225019 ]
             ]"#;
-        let result = parse(data.to_string());
+        let result = TdWatsonFrame::parse(data.to_string());
     }
 }

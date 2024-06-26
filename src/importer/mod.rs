@@ -1,1 +1,1 @@
-mod ts_watson;
+pub(crate) mod ts_watson;
