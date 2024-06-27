@@ -68,7 +68,8 @@ impl Tags {
         let tags = match s.len() {
             0 => Tags::default(),
             _ => {
-                let res = s.split_whitespace()
+                let res = s
+                    .split_whitespace()
                     .map(|tag| Tag::new(tag.trim_start_matches('+').to_string()))
                     .collect();
                 Tags::new(res)
