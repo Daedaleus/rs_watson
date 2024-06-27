@@ -3,9 +3,9 @@ use chrono::{DateTime, Local, TimeZone, Utc};
 use clap_derive::Args;
 use colored::Colorize;
 
-use crate::commands::params::At;
-use crate::commands::parse_time;
-use crate::commands::Invokable;
+use crate::command::param::at::At;
+use crate::command::utils::time::parse_time;
+use crate::command::Invokable;
 use crate::storage::entries::Entries;
 
 #[derive(Args)]

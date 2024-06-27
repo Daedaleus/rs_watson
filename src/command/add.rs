@@ -1,9 +1,11 @@
 use chrono::Local;
 use clap_derive::Args;
 
-use crate::commands::params::{At, Project, Tags};
-use crate::commands::parse_time;
-use crate::commands::Invokable;
+use crate::command::param::at::At;
+use crate::command::param::project::Project;
+use crate::command::param::tags::Tags;
+use crate::command::utils::time::parse_time;
+use crate::command::Invokable;
 use crate::storage::entries::Entries;
 use crate::storage::entry::Entry;
 
@@ -38,7 +40,7 @@ impl Invokable for Add {
 mod tests {
     use chrono::Timelike;
 
-    use crate::commands::params::Tag;
+    use crate::command::param::tag::Tag;
 
     use super::*;
 

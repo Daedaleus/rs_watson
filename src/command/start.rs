@@ -3,9 +3,11 @@ use chrono::{DateTime, Local, TimeZone, Utc};
 use clap_derive::Args;
 use colored::Colorize;
 
-use crate::commands::params::{At, Project, Tags};
-use crate::commands::parse_time;
-use crate::commands::Invokable;
+use crate::command::param::at::At;
+use crate::command::param::project::Project;
+use crate::command::param::tags::Tags;
+use crate::command::utils::time::parse_time;
+use crate::command::Invokable;
 use crate::storage::entries::Entries;
 use crate::storage::entry::Entry;
 
@@ -24,7 +26,7 @@ impl Invokable for Start {
         match entries.get_last() {
             Some(entry) => {
                 if entry.is_running() {
-                    crate::commands::stop::Stop::handle_command(entries, self.at.clone(), now)?;
+                    crate::command::stop::Stop::handle_command(entries, self.at.clone(), now)?;
                     Self::handle_command(
                         entries,
                         self.project.clone(),

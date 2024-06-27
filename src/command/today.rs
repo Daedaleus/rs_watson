@@ -1,7 +1,7 @@
 use clap_derive::Args;
 
-use crate::commands::report::Report;
-use crate::commands::Invokable;
+use crate::command::report::Report;
+use crate::command::Invokable;
 use crate::storage::entries::Entries;
 
 #[derive(Args)]

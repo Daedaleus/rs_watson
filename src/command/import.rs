@@ -1,8 +1,8 @@
 use anyhow::bail;
 use clap_derive::Args;
 
-use crate::commands::Invokable;
-use crate::importer::ts_watson::TdWatsonFrame;
+use crate::command::Invokable;
+use crate::importer::td_watson::TdWatsonFrame;
 use crate::storage::entries::Entries;
 use crate::storage::entry::Entry;
 

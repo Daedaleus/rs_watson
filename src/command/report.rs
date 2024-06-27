@@ -1,8 +1,11 @@
 use chrono::NaiveDate;
 use clap_derive::Args;
 
-use crate::commands::params::{FromDate, Project, ToDate};
-use crate::commands::{parse_date, Invokable};
+use crate::command::param::from_date::FromDate;
+use crate::command::param::project::Project;
+use crate::command::param::to_date::ToDate;
+use crate::command::utils::time::parse_date;
+use crate::command::Invokable;
 use crate::storage::entries::Entries;
 
 #[derive(Args)]

@@ -3,14 +3,14 @@ use std::fs::File;
 use anyhow::{Context, Result};
 use clap::Parser;
 
-use commands::Command;
+use command::Command;
 
-use crate::commands::run;
+use crate::command::run;
 use crate::config::Config;
 use crate::storage::entries::Entries;
 use crate::storage::get_or_create_file;
 
-mod commands;
+mod command;
 mod config;
 mod exporter;
 mod importer;

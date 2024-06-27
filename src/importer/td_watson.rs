@@ -29,7 +29,7 @@ impl TdWatsonFrame {
 
 #[cfg(test)]
 mod tests {
-    use crate::importer::ts_watson::TdWatsonFrame;
+    use crate::importer::td_watson::TdWatsonFrame;
 
     #[test]
     fn test() {

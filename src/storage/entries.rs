@@ -6,8 +6,8 @@ use chrono::{DateTime, NaiveDate, Utc};
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 
-use crate::commands::params::Project;
-use crate::importer::ts_watson::TdWatsonFrame;
+use crate::command::param::project::Project;
+use crate::importer::td_watson::TdWatsonFrame;
 use crate::storage::entry::Entry;
 use crate::storage::report::{ProjectEntry, Report};
 
@@ -135,6 +135,8 @@ impl From<Vec<TdWatsonFrame>> for Entries {
 
 #[cfg(test)]
 mod tests {
+    use crate::command::param::project::Project;
+
     use super::*;
 
     #[test]
