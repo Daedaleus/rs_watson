@@ -2,6 +2,7 @@ use chrono::{NaiveDate, NaiveTime};
 use clap_derive::{Args, Subcommand};
 use enum_dispatch::enum_dispatch;
 
+use crate::commands::add::Add;
 use crate::commands::edit::Edit;
 use crate::commands::export::Export;
 use crate::commands::import::Import;
@@ -13,6 +14,7 @@ use crate::commands::today::Today;
 use crate::storage::entries::Entries;
 use crate::Args;
 
+mod add;
 pub(crate) mod edit;
 pub(crate) mod export;
 pub(crate) mod import;
@@ -35,6 +37,7 @@ pub enum Command {
     Export(Export),
     Edit(Edit),
     Import(Import),
+    Add(Add),
 }
 
 #[derive(Args)]

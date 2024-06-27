@@ -16,8 +16,6 @@ pub struct Entries {
     entries: Vec<Entry>,
 }
 
-impl Entries {}
-
 impl Entries {
     pub fn push(&mut self, entry: Entry) {
         self.entries.push(entry);
