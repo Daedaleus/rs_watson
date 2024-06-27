@@ -65,11 +65,17 @@ impl Tags {
     }
 
     pub fn parse(s: &str) -> Result<Self, anyhow::Error> {
-        let tags = s
-            .split_whitespace()
-            .map(|tag| Tag::new(tag.trim_start_matches('+').to_string()))
-            .collect();
-        Ok(Tags::new(tags))
+        let tags = match s.len() {
+            0 => Tags::default(),
+            _ => {
+                let res = s.split_whitespace()
+                    .map(|tag| Tag::new(tag.trim_start_matches('+').to_string()))
+                    .collect();
+                Tags::new(res)
+            }
+        };
+
+        Ok(tags)
     }
 
     pub fn as_string(&self) -> String {
