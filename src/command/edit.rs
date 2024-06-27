@@ -3,7 +3,7 @@ use clap_derive::Args;
 use inquire::Editor;
 use serde_json::json;
 
-use crate::commands::Invokable;
+use crate::command::Invokable;
 use crate::storage::entries::Entries;
 use crate::storage::entry::Entry;
 

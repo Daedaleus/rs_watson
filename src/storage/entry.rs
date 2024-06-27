@@ -5,8 +5,9 @@ use chrono::{DateTime, TimeZone, Utc};
 use colored::Colorize;
 use serde::{Deserialize, Serialize};
 
-use crate::commands::params::{Project, Tags};
-use crate::importer::ts_watson::TdWatsonFrame;
+use crate::command::param::project::Project;
+use crate::command::param::tags::Tags;
+use crate::importer::td_watson::TdWatsonFrame;
 use crate::storage::gen_id;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
