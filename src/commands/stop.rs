@@ -10,7 +10,7 @@ use crate::storage::entries::Entries;
 
 #[derive(Args)]
 pub struct Stop {
-    #[clap(short = 'a')]
+    #[arg(short = 'a')]
     #[arg(value_parser(parse_time))]
     at: Option<At>,
 }

@@ -51,7 +51,8 @@ impl Entry {
         let duration = self.calculate_duration()?;
         let hours = duration / 3600;
         let minutes = (duration % 3600) / 60;
-        Ok(format!("{:02}:{:02}", hours, minutes))
+        let seconds = duration % 60;
+        Ok(format!("{:02}:{:02}:{:02}", hours, minutes, seconds))
     }
 
     pub fn get_project(&self) -> Project {

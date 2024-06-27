@@ -7,13 +7,13 @@ use crate::storage::entries::Entries;
 
 #[derive(Args)]
 pub(crate) struct Report {
-    #[clap(short = 'f')]
+    #[arg(short = 'f')]
     #[arg(value_parser(parse_date))]
     from: Option<NaiveDate>,
-    #[clap(short = 't')]
+    #[arg(short = 't')]
     #[arg(value_parser(parse_date))]
     to: Option<NaiveDate>,
-    #[clap(short = 'p')]
+    #[arg(short = 'p')]
     project: Option<Project>,
 }
 

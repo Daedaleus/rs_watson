@@ -11,9 +11,9 @@ use crate::storage::entry::Entry;
 pub(crate) struct Add {
     project: Project,
     tags: Tags,
-    #[clap(short = 'f', value_parser = parse_time)]
+    #[arg(short = 'f', value_parser = parse_time)]
     from: At,
-    #[clap(short = 't', value_parser = parse_time)]
+    #[arg(short = 't', value_parser = parse_time)]
     to: At,
 }
 

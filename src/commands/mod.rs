@@ -28,7 +28,7 @@ pub(crate) mod today;
 #[enum_dispatch(Invokable)]
 #[derive(Subcommand)]
 pub enum Command {
-    #[clap(name = "start", about = "Start logging")]
+    #[command(name = "start", about = "Start logging")]
     Start(Start),
     Log(Log),
     Stop(Stop),

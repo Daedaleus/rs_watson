@@ -13,7 +13,7 @@ use crate::storage::entry::Entry;
 pub struct Start {
     project: Project,
     tags: Option<Tags>,
-    #[clap(short = 'a', value_parser = parse_time)]
+    #[arg(short = 'a', value_parser = parse_time)]
     at: Option<At>,
 }
 
