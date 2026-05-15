@@ -7,7 +7,7 @@ use anyhow::{Context, Result};
 use chrono::{DateTime, Duration, Local, NaiveDate, NaiveTime, TimeZone, Utc};
 use clap::{Parser, Subcommand};
 use config::{Config, StorageProvider};
-use dialoguer::{Input, Select, theme::ColorfulTheme};
+use dialoguer::{Confirm, Input, Select, theme::ColorfulTheme};
 use owo_colors::OwoColorize;
 use rs_watson::{Frame, Report, Watson};
 use rs_watson_storage::Storage;
@@ -22,6 +22,8 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
+    /// Create the config file interactively
+    Init,
     /// Start tracking time on a project
     Start {
         /// Project name
@@ -80,6 +82,11 @@ fn main() {
 
 fn run() -> Result<()> {
     let cli = Cli::parse();
+
+    if matches!(cli.command, Commands::Init) {
+        return cmd_init();
+    }
+
     let config = Config::load()?;
 
     let data_dir = dirs::data_dir()
@@ -103,6 +110,7 @@ where
     S::Error: std::error::Error + Send + Sync + 'static,
 {
     match command {
+        Commands::Init => unreachable!("handled before dispatch"),
         Commands::Start { project, tags, at } => {
             let time = at.map(|s| parse_at(&s)).transpose()?.unwrap_or_else(Utc::now);
             check_future(time, config)?;
@@ -411,6 +419,72 @@ fn print_report_grouped(frames: &[Frame], show_total: bool) {
             fmt_duration(grand_total).magenta().bold(),
         );
     }
+}
+
+fn cmd_init() -> Result<()> {
+    use config::{BehaviorConfig, StorageConfig, StorageProvider};
+
+    let config_dir = dirs::config_dir()
+        .context("Could not determine config directory")?
+        .join("rs_watson");
+    let config_path = config_dir.join("config.toml");
+
+    if config_path.exists() {
+        let overwrite = Confirm::with_theme(&ColorfulTheme::default())
+            .with_prompt("Config file already exists. Overwrite?")
+            .default(false)
+            .interact()?;
+        if !overwrite {
+            println!("{}", "Aborted.".bright_black());
+            return Ok(());
+        }
+    }
+
+    println!();
+
+    // [storage]
+    let provider_idx = Select::with_theme(&ColorfulTheme::default())
+        .with_prompt("Storage provider")
+        .items(&["JSON"])
+        .default(0)
+        .interact()?;
+    let provider = match provider_idx {
+        _ => StorageProvider::Json,
+    };
+
+    println!();
+
+    // [behavior]
+    let allow_future_times = Confirm::with_theme(&ColorfulTheme::default())
+        .with_prompt("Allow future times for start, stop and add?")
+        .default(false)
+        .interact()?;
+
+    let config = Config {
+        storage: StorageConfig { provider },
+        behavior: BehaviorConfig { allow_future_times },
+    };
+
+    std::fs::create_dir_all(&config_dir)
+        .with_context(|| format!("Could not create config directory: {}", config_dir.display()))?;
+
+    let content = toml::to_string(&config)
+        .context("Could not serialize config")?;
+    std::fs::write(&config_path, &content)
+        .with_context(|| format!("Could not write config: {}", config_path.display()))?;
+
+    println!();
+    println!(
+        "{} {}",
+        "Config written to".green().bold(),
+        config_path.display().to_string().bright_white(),
+    );
+    println!();
+    for line in content.lines() {
+        println!("  {}", line.bright_black());
+    }
+
+    Ok(())
 }
 
 fn check_future(dt: DateTime<Utc>, config: &Config) -> Result<()> {
