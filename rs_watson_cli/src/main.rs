@@ -26,9 +26,16 @@ enum Commands {
         /// Tags (can be specified multiple times)
         #[arg(short = 't', long = "tag")]
         tags: Vec<String>,
+        /// Start time in local time, e.g. 09:00 or 09:00:00 (default: now)
+        #[arg(long, value_name = "HH:MM")]
+        at: Option<String>,
     },
     /// Stop the current tracking session
-    Stop,
+    Stop {
+        /// Stop time in local time, e.g. 17:30 or 17:30:00 (default: now)
+        #[arg(long, value_name = "HH:MM")]
+        at: Option<String>,
+    },
     /// Cancel the current tracking session without saving
     Cancel,
     /// Show what is currently being tracked
@@ -63,9 +70,10 @@ fn run() -> Result<()> {
     let watson = Watson::new(storage);
 
     match cli.command {
-        Commands::Start { project, tags } => {
+        Commands::Start { project, tags, at } => {
+            let time = at.map(|s| parse_at(&s)).transpose()?.unwrap_or_else(Utc::now);
             let frame = watson
-                .start(&project, tags, Utc::now())
+                .start(&project, tags, time)
                 .map_err(|e| anyhow::anyhow!("{e}"))?;
 
             println!(
@@ -76,9 +84,10 @@ fn run() -> Result<()> {
                 fmt_time(frame.start).bright_black(),
             );
         }
-        Commands::Stop => {
+        Commands::Stop { at } => {
+            let time = at.map(|s| parse_at(&s)).transpose()?.unwrap_or_else(Utc::now);
             let frame = watson
-                .stop(Utc::now())
+                .stop(time)
                 .map_err(|e| anyhow::anyhow!("{e}"))?;
 
             println!(
@@ -334,6 +343,20 @@ fn print_report_grouped(frames: &[Frame], show_total: bool) {
             fmt_duration(grand_total).magenta().bold(),
         );
     }
+}
+
+/// Parses a local time string (HH:MM or HH:MM:SS) relative to today and returns UTC.
+fn parse_at(input: &str) -> Result<DateTime<Utc>> {
+    let local_now = Local::now();
+    let time = NaiveTime::parse_from_str(input.trim(), "%H:%M:%S")
+        .or_else(|_| NaiveTime::parse_from_str(input.trim(), "%H:%M"))
+        .with_context(|| format!("Invalid time \"{input}\", expected HH:MM or HH:MM:SS"))?;
+    let naive_local = local_now.date_naive().and_time(time);
+    Local
+        .from_local_datetime(&naive_local)
+        .single()
+        .map(|dt| dt.with_timezone(&Utc))
+        .context("Ambiguous time (DST transition)")
 }
 
 /// Prompts for a time value in local time, pre-filled with the local representation of `default`.
