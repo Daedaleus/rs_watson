@@ -28,15 +28,15 @@ pub struct StorageConfig {
 #[derive(Debug, Deserialize, Serialize, Clone, Copy, Default)]
 #[serde(rename_all = "lowercase")]
 pub enum StorageProvider {
-    #[default]
     Json,
+    #[default]
     Sqlite,
 }
 
 impl Default for StorageConfig {
     fn default() -> Self {
         StorageConfig {
-            provider: StorageProvider::Json,
+            provider: StorageProvider::Sqlite,
             data_dir: None,
         }
     }

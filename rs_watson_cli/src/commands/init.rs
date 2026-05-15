@@ -26,12 +26,12 @@ pub(crate) fn cmd_init() -> Result<()> {
     // [storage]
     let provider_idx = Select::with_theme(&ColorfulTheme::default())
         .with_prompt("Storage provider")
-        .items(["JSON  (frames.json + state.json)", "SQLite  (watson.db)"])
+        .items(["SQLite  (watson.db)", "JSON  (frames.json + state.json)"])
         .default(0)
         .interact()?;
     let provider = match provider_idx {
-        1 => StorageProvider::Sqlite,
-        _ => StorageProvider::Json,
+        1 => StorageProvider::Json,
+        _ => StorageProvider::Sqlite,
     };
 
     println!();
