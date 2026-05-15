@@ -199,7 +199,10 @@ impl WatsonApp {
         match self.watson.start_or_replace(&project, tags, Utc::now()) {
             Ok(r) => {
                 let msg = if r.replaced.is_some() {
-                    format!("Stopped previous session, now tracking \"{}\".", r.active.project)
+                    format!(
+                        "Stopped previous session, now tracking \"{}\".",
+                        r.active.project
+                    )
                 } else {
                     format!("Started tracking \"{}\".", r.active.project)
                 };
@@ -215,7 +218,14 @@ impl WatsonApp {
     fn do_stop(&mut self) {
         match self.watson.stop(Utc::now()) {
             Ok(f) => {
-                self.set_msg(true, format!("Stopped \"{}\" — {}.", f.project, fmt_duration(f.end - f.start)));
+                self.set_msg(
+                    true,
+                    format!(
+                        "Stopped \"{}\" — {}.",
+                        f.project,
+                        fmt_duration(f.end - f.start)
+                    ),
+                );
                 self.refresh();
             }
             Err(e) => self.set_msg(false, e.to_string()),
@@ -249,7 +259,14 @@ impl WatsonApp {
         let tags = parse_tags(&self.add_tags);
         match self.watson.add(&project, tags, start, end) {
             Ok(f) => {
-                self.set_add_msg(true, format!("Added \"{}\" — {}.", f.project, fmt_duration(f.end - f.start)));
+                self.set_add_msg(
+                    true,
+                    format!(
+                        "Added \"{}\" — {}.",
+                        f.project,
+                        fmt_duration(f.end - f.start)
+                    ),
+                );
                 self.add_project.clear();
                 self.add_tags.clear();
                 self.add_from.clear();
@@ -261,7 +278,9 @@ impl WatsonApp {
     }
 
     fn do_edit_save(&mut self) {
-        let Some(state) = &mut self.edit_state else { return };
+        let Some(state) = &mut self.edit_state else {
+            return;
+        };
 
         let project = state.project.trim().to_string();
         if project.is_empty() {
@@ -325,7 +344,8 @@ impl WatsonApp {
 
 impl eframe::App for WatsonApp {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
-        ui.ctx().request_repaint_after(std::time::Duration::from_secs(1));
+        ui.ctx()
+            .request_repaint_after(std::time::Duration::from_secs(1));
 
         // Edit modal is a floating window — must be called before panels.
         if self.edit_state.is_some() {
@@ -339,12 +359,15 @@ impl eframe::App for WatsonApp {
                 Some(active) => {
                     let elapsed = Utc::now() - active.start;
                     ui.label(egui::RichText::new("● TRACKING").color(CLR_GREEN).strong());
-                    ui.label(egui::RichText::new(format!(
-                        "  {}{}  —  {}",
-                        active.project,
-                        fmt_tags(&active.tags),
-                        fmt_duration(elapsed)
-                    )).strong());
+                    ui.label(
+                        egui::RichText::new(format!(
+                            "  {}{}  —  {}",
+                            active.project,
+                            fmt_tags(&active.tags),
+                            fmt_duration(elapsed)
+                        ))
+                        .strong(),
+                    );
                 }
                 None => {
                     ui.label(egui::RichText::new("○ Not tracking").color(egui::Color32::GRAY));
@@ -370,14 +393,19 @@ impl eframe::App for WatsonApp {
                 }
                 #[allow(deprecated)]
                 egui::popup_below_widget(
-                    ui, proj_id, &proj_resp,
+                    ui,
+                    proj_id,
+                    &proj_resp,
                     egui::PopupCloseBehavior::CloseOnClickOutside,
                     |ui| {
                         ui.set_min_width(150.0);
                         let filter = self.input_project.to_lowercase();
-                        for proj in self.projects.clone().iter().filter(|p| {
-                            filter.is_empty() || p.to_lowercase().contains(&filter)
-                        }) {
+                        for proj in self
+                            .projects
+                            .clone()
+                            .iter()
+                            .filter(|p| filter.is_empty() || p.to_lowercase().contains(&filter))
+                        {
                             if ui.selectable_label(false, proj).clicked() {
                                 self.input_project = proj.clone();
                                 ui.memory_mut(|m| m.close_popup(proj_id));
@@ -403,10 +431,16 @@ impl eframe::App for WatsonApp {
 
                 let tracking = self.status.is_some();
                 ui.add_enabled_ui(tracking, |ui| {
-                    if ui.button(egui::RichText::new("■  Stop").color(CLR_RED)).clicked() {
+                    if ui
+                        .button(egui::RichText::new("■  Stop").color(CLR_RED))
+                        .clicked()
+                    {
                         self.do_stop();
                     }
-                    if ui.button(egui::RichText::new("✕  Cancel").color(egui::Color32::GRAY)).clicked() {
+                    if ui
+                        .button(egui::RichText::new("✕  Cancel").color(egui::Color32::GRAY))
+                        .clicked()
+                    {
                         self.do_cancel();
                     }
                 });
@@ -414,7 +448,11 @@ impl eframe::App for WatsonApp {
 
             if let Some(msg) = &self.message {
                 ui.add_space(2.0);
-                let color = if self.message_is_error { CLR_RED } else { CLR_GREEN };
+                let color = if self.message_is_error {
+                    CLR_RED
+                } else {
+                    CLR_GREEN
+                };
                 ui.label(egui::RichText::new(msg).color(color).small());
             }
             ui.add_space(4.0);
@@ -445,9 +483,17 @@ impl WatsonApp {
         // Date filter
         ui.horizontal(|ui| {
             ui.label("From");
-            ui.add(egui::TextEdit::singleline(&mut self.log_from).hint_text("YYYY-MM-DD").desired_width(100.0));
+            ui.add(
+                egui::TextEdit::singleline(&mut self.log_from)
+                    .hint_text("YYYY-MM-DD")
+                    .desired_width(100.0),
+            );
             ui.label("To");
-            ui.add(egui::TextEdit::singleline(&mut self.log_to).hint_text("YYYY-MM-DD").desired_width(100.0));
+            ui.add(
+                egui::TextEdit::singleline(&mut self.log_to)
+                    .hint_text("YYYY-MM-DD")
+                    .desired_width(100.0),
+            );
             if ui.small_button("Clear").clicked() {
                 self.log_from.clear();
                 self.log_to.clear();
@@ -455,7 +501,8 @@ impl WatsonApp {
         });
         ui.separator();
 
-        let visible: Vec<&Frame> = Self::filtered_frames(&self.frames, &self.log_from, &self.log_to);
+        let visible: Vec<&Frame> =
+            Self::filtered_frames(&self.frames, &self.log_from, &self.log_to);
         if visible.is_empty() {
             ui.centered_and_justified(|ui| {
                 ui.label(egui::RichText::new("No frames.").color(egui::Color32::GRAY));
@@ -471,16 +518,25 @@ impl WatsonApp {
 
         let mut by_day: BTreeMap<NaiveDate, Vec<&Frame>> = BTreeMap::new();
         for f in visible.iter().rev() {
-            by_day.entry(f.start.with_timezone(&Local).date_naive()).or_default().push(f);
+            by_day
+                .entry(f.start.with_timezone(&Local).date_naive())
+                .or_default()
+                .push(f);
         }
 
         egui::ScrollArea::vertical().show(ui, |ui| {
             for (date, day_frames) in by_day.iter().rev() {
-                let day_total = day_frames.iter().fold(Duration::zero(), |a, f| a + (f.end - f.start));
+                let day_total = day_frames
+                    .iter()
+                    .fold(Duration::zero(), |a, f| a + (f.end - f.start));
                 ui.add_space(4.0);
                 ui.horizontal(|ui| {
                     ui.label(egui::RichText::new(date.format("%A, %d %B %Y").to_string()).strong());
-                    ui.label(egui::RichText::new(format!("({})", fmt_duration(day_total))).color(egui::Color32::GRAY).small());
+                    ui.label(
+                        egui::RichText::new(format!("({})", fmt_duration(day_total)))
+                            .color(egui::Color32::GRAY)
+                            .small(),
+                    );
                 });
                 ui.separator();
 
@@ -488,11 +544,19 @@ impl WatsonApp {
                     if self.delete_confirm_id == Some(frame.id) {
                         // Inline delete confirmation row
                         ui.horizontal(|ui| {
-                            ui.label(egui::RichText::new(format!(
-                                "Delete \"{}\" {}  →  {} ?",
-                                frame.project, fmt_time(frame.start), fmt_time(frame.end)
-                            )).color(CLR_RED));
-                            if ui.button(egui::RichText::new("Yes, delete").color(CLR_RED)).clicked() {
+                            ui.label(
+                                egui::RichText::new(format!(
+                                    "Delete \"{}\" {}  →  {} ?",
+                                    frame.project,
+                                    fmt_time(frame.start),
+                                    fmt_time(frame.end)
+                                ))
+                                .color(CLR_RED),
+                            );
+                            if ui
+                                .button(egui::RichText::new("Yes, delete").color(CLR_RED))
+                                .clicked()
+                            {
                                 confirmed_delete = Some(frame.id);
                             }
                             if ui.button("Cancel").clicked() {
@@ -501,20 +565,42 @@ impl WatsonApp {
                         });
                     } else {
                         ui.horizontal(|ui| {
-                            ui.label(egui::RichText::new(format!("{}  →  {}", fmt_time(frame.start), fmt_time(frame.end))).monospace().color(egui::Color32::LIGHT_GRAY));
-                            ui.label(egui::RichText::new(fmt_duration(frame.end - frame.start)).monospace().color(CLR_PURPLE));
+                            ui.label(
+                                egui::RichText::new(format!(
+                                    "{}  →  {}",
+                                    fmt_time(frame.start),
+                                    fmt_time(frame.end)
+                                ))
+                                .monospace()
+                                .color(egui::Color32::LIGHT_GRAY),
+                            );
+                            ui.label(
+                                egui::RichText::new(fmt_duration(frame.end - frame.start))
+                                    .monospace()
+                                    .color(CLR_PURPLE),
+                            );
                             ui.label(egui::RichText::new(&frame.project).strong());
                             if !frame.tags.is_empty() {
-                                ui.label(egui::RichText::new(format!("[{}]", frame.tags.join(", "))).color(CLR_CYAN).small());
+                                ui.label(
+                                    egui::RichText::new(format!("[{}]", frame.tags.join(", ")))
+                                        .color(CLR_CYAN)
+                                        .small(),
+                                );
                             }
-                            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                                if ui.small_button(egui::RichText::new("✕").color(CLR_RED)).clicked() {
-                                    to_delete = Some(frame.id);
-                                }
-                                if ui.small_button("Edit").clicked() {
-                                    to_edit = Some(frame.id);
-                                }
-                            });
+                            ui.with_layout(
+                                egui::Layout::right_to_left(egui::Align::Center),
+                                |ui| {
+                                    if ui
+                                        .small_button(egui::RichText::new("✕").color(CLR_RED))
+                                        .clicked()
+                                    {
+                                        to_delete = Some(frame.id);
+                                    }
+                                    if ui.small_button("Edit").clicked() {
+                                        to_edit = Some(frame.id);
+                                    }
+                                },
+                            );
                         });
                     }
                 }
@@ -530,11 +616,9 @@ impl WatsonApp {
         } else if let Some(id) = to_delete {
             self.delete_confirm_id = Some(id);
         }
-        if let Some(id) = to_edit {
-            if let Some(frame) = self.frames.iter().find(|f| f.id == id) {
-                self.edit_state = Some(EditState::from_frame(frame));
-                self.delete_confirm_id = None;
-            }
+        if let Some(id) = to_edit.and_then(|id| self.frames.iter().find(|f| f.id == id).map(|f| (id, f.clone()))) {
+            self.edit_state = Some(EditState::from_frame(&id.1));
+            self.delete_confirm_id = None;
         }
     }
 }
@@ -545,7 +629,9 @@ impl WatsonApp {
 
 impl WatsonApp {
     fn show_edit_modal(&mut self, ctx: &egui::Context) {
-        let Some(state) = &mut self.edit_state else { return };
+        let Some(state) = &mut self.edit_state else {
+            return;
+        };
         let mut save = false;
         let mut close = false;
 
@@ -554,23 +640,30 @@ impl WatsonApp {
             .resizable(false)
             .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
             .show(ctx, |ui| {
-                egui::Grid::new("edit_grid").num_columns(2).spacing([12.0, 8.0]).show(ui, |ui| {
-                    ui.label("Project");
-                    ui.add(egui::TextEdit::singleline(&mut state.project).desired_width(220.0));
-                    ui.end_row();
+                egui::Grid::new("edit_grid")
+                    .num_columns(2)
+                    .spacing([12.0, 8.0])
+                    .show(ui, |ui| {
+                        ui.label("Project");
+                        ui.add(egui::TextEdit::singleline(&mut state.project).desired_width(220.0));
+                        ui.end_row();
 
-                    ui.label("Tags");
-                    ui.add(egui::TextEdit::singleline(&mut state.tags).hint_text("api, auth").desired_width(220.0));
-                    ui.end_row();
+                        ui.label("Tags");
+                        ui.add(
+                            egui::TextEdit::singleline(&mut state.tags)
+                                .hint_text("api, auth")
+                                .desired_width(220.0),
+                        );
+                        ui.end_row();
 
-                    ui.label("Start");
-                    ui.add(egui::TextEdit::singleline(&mut state.start).desired_width(220.0));
-                    ui.end_row();
+                        ui.label("Start");
+                        ui.add(egui::TextEdit::singleline(&mut state.start).desired_width(220.0));
+                        ui.end_row();
 
-                    ui.label("End");
-                    ui.add(egui::TextEdit::singleline(&mut state.end).desired_width(220.0));
-                    ui.end_row();
-                });
+                        ui.label("End");
+                        ui.add(egui::TextEdit::singleline(&mut state.end).desired_width(220.0));
+                        ui.end_row();
+                    });
 
                 if let Some(err) = &state.error {
                     ui.colored_label(CLR_RED, err);
@@ -603,59 +696,86 @@ impl WatsonApp {
     fn show_add(&mut self, ui: &mut egui::Ui) {
         ui.add_space(12.0);
 
-        egui::Grid::new("add_grid").num_columns(2).spacing([12.0, 10.0]).show(ui, |ui| {
-            ui.label("Project");
-            // Project field with autocomplete popup
-            let add_proj_id = egui::Id::new("add_proj_popup");
-            let add_proj_resp = ui.add(
-                egui::TextEdit::singleline(&mut self.add_project)
-                    .hint_text("backend")
-                    .desired_width(240.0),
-            );
-            if add_proj_resp.gained_focus() && !self.projects.is_empty() {
+        egui::Grid::new("add_grid")
+            .num_columns(2)
+            .spacing([12.0, 10.0])
+            .show(ui, |ui| {
+                ui.label("Project");
+                // Project field with autocomplete popup
+                let add_proj_id = egui::Id::new("add_proj_popup");
+                let add_proj_resp = ui.add(
+                    egui::TextEdit::singleline(&mut self.add_project)
+                        .hint_text("backend")
+                        .desired_width(240.0),
+                );
+                if add_proj_resp.gained_focus() && !self.projects.is_empty() {
+                    #[allow(deprecated)]
+                    ui.memory_mut(|m| m.open_popup(add_proj_id));
+                }
                 #[allow(deprecated)]
-                ui.memory_mut(|m| m.open_popup(add_proj_id));
-            }
-            #[allow(deprecated)]
-            egui::popup_below_widget(
-                ui, add_proj_id, &add_proj_resp,
-                egui::PopupCloseBehavior::CloseOnClickOutside,
-                |ui| {
-                    ui.set_min_width(240.0);
-                    let filter = self.add_project.to_lowercase();
-                    for proj in self.projects.clone().iter().filter(|p| {
-                        filter.is_empty() || p.to_lowercase().contains(&filter)
-                    }) {
-                        if ui.selectable_label(false, proj).clicked() {
-                            self.add_project = proj.clone();
-                            ui.memory_mut(|m| m.close_popup(add_proj_id));
+                egui::popup_below_widget(
+                    ui,
+                    add_proj_id,
+                    &add_proj_resp,
+                    egui::PopupCloseBehavior::CloseOnClickOutside,
+                    |ui| {
+                        ui.set_min_width(240.0);
+                        let filter = self.add_project.to_lowercase();
+                        for proj in self
+                            .projects
+                            .clone()
+                            .iter()
+                            .filter(|p| filter.is_empty() || p.to_lowercase().contains(&filter))
+                        {
+                            if ui.selectable_label(false, proj).clicked() {
+                                self.add_project = proj.clone();
+                                ui.memory_mut(|m| m.close_popup(add_proj_id));
+                            }
                         }
-                    }
-                },
-            );
-            ui.end_row();
+                    },
+                );
+                ui.end_row();
 
-            ui.label("Tags");
-            ui.add(egui::TextEdit::singleline(&mut self.add_tags).hint_text("api, auth  (comma-separated)").desired_width(240.0));
-            ui.end_row();
+                ui.label("Tags");
+                ui.add(
+                    egui::TextEdit::singleline(&mut self.add_tags)
+                        .hint_text("api, auth  (comma-separated)")
+                        .desired_width(240.0),
+                );
+                ui.end_row();
 
-            ui.label("Start");
-            ui.add(egui::TextEdit::singleline(&mut self.add_from).hint_text("YYYY-MM-DD HH:MM  or  HH:MM").desired_width(240.0));
-            ui.end_row();
+                ui.label("Start");
+                ui.add(
+                    egui::TextEdit::singleline(&mut self.add_from)
+                        .hint_text("YYYY-MM-DD HH:MM  or  HH:MM")
+                        .desired_width(240.0),
+                );
+                ui.end_row();
 
-            ui.label("End");
-            ui.add(egui::TextEdit::singleline(&mut self.add_to).hint_text("YYYY-MM-DD HH:MM  or  HH:MM").desired_width(240.0));
-            ui.end_row();
-        });
+                ui.label("End");
+                ui.add(
+                    egui::TextEdit::singleline(&mut self.add_to)
+                        .hint_text("YYYY-MM-DD HH:MM  or  HH:MM")
+                        .desired_width(240.0),
+                );
+                ui.end_row();
+            });
 
         ui.add_space(8.0);
-        if ui.button(egui::RichText::new("Add Frame").strong()).clicked() {
+        if ui
+            .button(egui::RichText::new("Add Frame").strong())
+            .clicked()
+        {
             self.do_add();
         }
 
         if let Some(msg) = &self.add_message {
             ui.add_space(6.0);
-            let color = if self.add_message_is_error { CLR_RED } else { CLR_GREEN };
+            let color = if self.add_message_is_error {
+                CLR_RED
+            } else {
+                CLR_GREEN
+            };
             ui.label(egui::RichText::new(msg).color(color));
         }
     }
@@ -670,9 +790,17 @@ impl WatsonApp {
         // Filter + epics toggle
         ui.horizontal(|ui| {
             ui.label("From");
-            ui.add(egui::TextEdit::singleline(&mut self.report_from).hint_text("YYYY-MM-DD").desired_width(100.0));
+            ui.add(
+                egui::TextEdit::singleline(&mut self.report_from)
+                    .hint_text("YYYY-MM-DD")
+                    .desired_width(100.0),
+            );
             ui.label("To");
-            ui.add(egui::TextEdit::singleline(&mut self.report_to).hint_text("YYYY-MM-DD").desired_width(100.0));
+            ui.add(
+                egui::TextEdit::singleline(&mut self.report_to)
+                    .hint_text("YYYY-MM-DD")
+                    .desired_width(100.0),
+            );
             if ui.small_button("Clear").clicked() {
                 self.report_from.clear();
                 self.report_to.clear();
@@ -684,10 +812,11 @@ impl WatsonApp {
         });
         ui.separator();
 
-        let visible: Vec<Frame> = Self::filtered_frames(&self.frames, &self.report_from, &self.report_to)
-            .into_iter()
-            .cloned()
-            .collect();
+        let visible: Vec<Frame> =
+            Self::filtered_frames(&self.frames, &self.report_from, &self.report_to)
+                .into_iter()
+                .cloned()
+                .collect();
 
         if visible.is_empty() {
             ui.centered_and_justified(|ui| {
@@ -723,15 +852,25 @@ impl WatsonApp {
             }
         }
 
-        let grand_total = frames.iter().fold(Duration::zero(), |a, f| a + (f.end - f.start));
+        let grand_total = frames
+            .iter()
+            .fold(Duration::zero(), |a, f| a + (f.end - f.start));
 
         for (name, epic_frames) in buckets.iter().filter(|(_, f)| !f.is_empty()) {
             let owned: Vec<Frame> = epic_frames.iter().copied().cloned().collect();
             let report = Report::from_frames(&owned);
             ui.add_space(4.0);
             ui.horizontal(|ui| {
-                ui.label(egui::RichText::new(format!("◆  {name}")).color(CLR_CYAN).strong());
-                ui.label(egui::RichText::new(format!("({})", fmt_duration(report.total))).color(egui::Color32::GRAY).small());
+                ui.label(
+                    egui::RichText::new(format!("◆  {name}"))
+                        .color(CLR_CYAN)
+                        .strong(),
+                );
+                ui.label(
+                    egui::RichText::new(format!("({})", fmt_duration(report.total)))
+                        .color(egui::Color32::GRAY)
+                        .small(),
+                );
             });
             render_project_report(ui, &report, false);
             ui.add_space(4.0);
@@ -742,8 +881,16 @@ impl WatsonApp {
             let report = Report::from_frames(&owned);
             ui.add_space(4.0);
             ui.horizontal(|ui| {
-                ui.label(egui::RichText::new("◆  Unassigned").color(egui::Color32::GRAY).strong());
-                ui.label(egui::RichText::new(format!("({})", fmt_duration(report.total))).color(egui::Color32::GRAY).small());
+                ui.label(
+                    egui::RichText::new("◆  Unassigned")
+                        .color(egui::Color32::GRAY)
+                        .strong(),
+                );
+                ui.label(
+                    egui::RichText::new(format!("({})", fmt_duration(report.total)))
+                        .color(egui::Color32::GRAY)
+                        .small(),
+                );
             });
             render_project_report(ui, &report, false);
         }
@@ -751,7 +898,11 @@ impl WatsonApp {
         ui.separator();
         ui.horizontal(|ui| {
             ui.label(egui::RichText::new("Total").strong());
-            ui.label(egui::RichText::new(fmt_duration(grand_total)).color(CLR_PURPLE).strong());
+            ui.label(
+                egui::RichText::new(fmt_duration(grand_total))
+                    .color(CLR_PURPLE)
+                    .strong(),
+            );
         });
         ui.add_space(8.0);
     }
@@ -761,14 +912,30 @@ fn render_project_report(ui: &mut egui::Ui, report: &Report, show_total: bool) {
     for project in &report.projects {
         ui.add_space(2.0);
         ui.horizontal(|ui| {
-            ui.label(egui::RichText::new(&project.name).strong().color(CLR_YELLOW));
-            ui.label(egui::RichText::new(fmt_duration(project.total)).color(CLR_PURPLE).strong());
+            ui.label(
+                egui::RichText::new(&project.name)
+                    .strong()
+                    .color(CLR_YELLOW),
+            );
+            ui.label(
+                egui::RichText::new(fmt_duration(project.total))
+                    .color(CLR_PURPLE)
+                    .strong(),
+            );
         });
         for tag in &project.tags {
             ui.horizontal(|ui| {
                 ui.add_space(16.0);
-                ui.label(egui::RichText::new(format!("[{}]", tag.name)).color(CLR_CYAN).small());
-                ui.label(egui::RichText::new(fmt_duration(tag.total)).color(CLR_PURPLE).small());
+                ui.label(
+                    egui::RichText::new(format!("[{}]", tag.name))
+                        .color(CLR_CYAN)
+                        .small(),
+                );
+                ui.label(
+                    egui::RichText::new(fmt_duration(tag.total))
+                        .color(CLR_PURPLE)
+                        .small(),
+                );
             });
         }
     }
@@ -776,7 +943,11 @@ fn render_project_report(ui: &mut egui::Ui, report: &Report, show_total: bool) {
         ui.separator();
         ui.horizontal(|ui| {
             ui.label(egui::RichText::new("Total").strong());
-            ui.label(egui::RichText::new(fmt_duration(report.total)).color(CLR_PURPLE).strong());
+            ui.label(
+                egui::RichText::new(fmt_duration(report.total))
+                    .color(CLR_PURPLE)
+                    .strong(),
+            );
         });
     }
     ui.add_space(4.0);
@@ -804,7 +975,10 @@ fn collect_projects(frames: &[Frame]) -> Vec<String> {
 }
 
 fn parse_tags(s: &str) -> Vec<String> {
-    s.split(',').map(|t| t.trim().to_string()).filter(|t| !t.is_empty()).collect()
+    s.split(',')
+        .map(|t| t.trim().to_string())
+        .filter(|t| !t.is_empty())
+        .collect()
 }
 
 fn parse_local_dt(s: &str) -> Option<DateTime<Utc>> {
@@ -818,7 +992,10 @@ fn parse_local_dt(s: &str) -> Option<DateTime<Utc>> {
                 .ok()
                 .map(|t| Local::now().date_naive().and_time(t))
         })?;
-    Local.from_local_datetime(&naive).single().map(|dt| dt.with_timezone(&Utc))
+    Local
+        .from_local_datetime(&naive)
+        .single()
+        .map(|dt| dt.with_timezone(&Utc))
 }
 
 fn parse_local_date(s: &str) -> Option<NaiveDate> {
@@ -832,7 +1009,9 @@ fn parse_local_date(s: &str) -> Option<NaiveDate> {
 }
 
 fn fmt_local_dt(dt: DateTime<Utc>) -> String {
-    dt.with_timezone(&Local).format("%Y-%m-%d %H:%M:%S").to_string()
+    dt.with_timezone(&Local)
+        .format("%Y-%m-%d %H:%M:%S")
+        .to_string()
 }
 
 fn fmt_time(dt: DateTime<Utc>) -> String {
@@ -844,11 +1023,19 @@ fn fmt_duration(d: Duration) -> String {
     let h = total / 3600;
     let m = (total % 3600) / 60;
     let s = total % 60;
-    if h > 0 { format!("{h}h {m:02}m {s:02}s") }
-    else if m > 0 { format!("{m}m {s:02}s") }
-    else { format!("{s}s") }
+    if h > 0 {
+        format!("{h}h {m:02}m {s:02}s")
+    } else if m > 0 {
+        format!("{m}m {s:02}s")
+    } else {
+        format!("{s}s")
+    }
 }
 
 fn fmt_tags(tags: &[String]) -> String {
-    if tags.is_empty() { String::new() } else { format!("  [{}]", tags.join(", ")) }
+    if tags.is_empty() {
+        String::new()
+    } else {
+        format!("  [{}]", tags.join(", "))
+    }
 }

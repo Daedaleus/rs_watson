@@ -1,0 +1,125 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Build release binaries for each target platform
+  # ---------------------------------------------------------------------------
+  build:
+    name: Build ${{ matrix.name }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: linux-x86_64
+            runner: ubuntu-latest
+            cli_bin: watson
+            ui_bin: rs_watson_ui
+            archive_ext: tar.gz
+
+          - name: macos-aarch64
+            runner: macos-latest
+            cli_bin: watson
+            ui_bin: rs_watson_ui
+            archive_ext: tar.gz
+
+          - name: macos-x86_64
+            runner: macos-13
+            cli_bin: watson
+            ui_bin: rs_watson_ui
+            archive_ext: tar.gz
+
+          - name: windows-x86_64
+            runner: windows-latest
+            cli_bin: watson.exe
+            ui_bin: rs_watson_ui.exe
+            archive_ext: zip
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: release-${{ matrix.name }}-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Install system dependencies (Linux — egui/eframe)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y --no-install-recommends \
+            libxkbcommon-dev libwayland-dev libx11-dev \
+            libegl1-mesa-dev libfontconfig1-dev
+
+      - name: Build release binaries
+        run: cargo build --release -p rs_watson_cli -p rs_watson_ui
+
+      # --- Package -----------------------------------------------------------
+
+      - name: Package (Linux / macOS)
+        if: matrix.archive_ext == 'tar.gz'
+        shell: bash
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          ARCHIVE="rs-watson-${TAG}-${{ matrix.name }}.tar.gz"
+          tar -czf "${ARCHIVE}" \
+            -C target/release \
+            ${{ matrix.cli_bin }} \
+            ${{ matrix.ui_bin }}
+          echo "ARCHIVE=${ARCHIVE}" >> "$GITHUB_ENV"
+
+      - name: Package (Windows)
+        if: matrix.archive_ext == 'zip'
+        shell: pwsh
+        run: |
+          $tag  = $env:GITHUB_REF_NAME
+          $name = "rs-watson-${tag}-${{ matrix.name }}.zip"
+          Compress-Archive `
+            -Path "target/release/${{ matrix.cli_bin }}", `
+                  "target/release/${{ matrix.ui_bin }}" `
+            -DestinationPath $name
+          "ARCHIVE=$name" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: rs-watson-${{ matrix.name }}
+          path: ${{ env.ARCHIVE }}
+
+  # ---------------------------------------------------------------------------
+  # Create the GitHub Release and attach all archives
+  # ---------------------------------------------------------------------------
+  release:
+    name: Create GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true

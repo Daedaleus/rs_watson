@@ -31,6 +31,13 @@ jobs:
             target
           key: lint-${{ hashFiles('**/Cargo.lock') }}
 
+      - name: Install system dependencies (egui/eframe)
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y --no-install-recommends \
+            libxkbcommon-dev libwayland-dev libx11-dev \
+            libegl1-mesa-dev libfontconfig1-dev
+
       - name: cargo fmt --check
         run: cargo fmt --check
 
@@ -60,6 +67,14 @@ jobs:
             target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-cargo-
+
+      - name: Install system dependencies (Linux — egui/eframe)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y --no-install-recommends \
+            libxkbcommon-dev libwayland-dev libx11-dev \
+            libegl1-mesa-dev libfontconfig1-dev
 
       - name: cargo build
         run: cargo build
