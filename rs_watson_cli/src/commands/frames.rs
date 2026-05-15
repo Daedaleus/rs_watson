@@ -6,6 +6,7 @@ use rs_watson::Watson;
 use rs_watson_storage::Storage;
 
 use crate::config::Config;
+use crate::epic::print_epic_report;
 use crate::format::{fmt_duration, fmt_tags, fmt_time, print_frames_grouped, print_report_grouped};
 use crate::time_utils::{check_future, parse_at, prompt_time};
 
@@ -33,6 +34,8 @@ pub(super) fn cmd_log<S: Storage<Error: std::error::Error + Send + Sync + 'stati
 
 pub(super) fn cmd_today<S: Storage<Error: std::error::Error + Send + Sync + 'static>>(
     watson: &Watson<S>,
+    epic: bool,
+    config: &Config,
 ) -> Result<()> {
     let today = Local::now().date_naive();
     let frames: Vec<_> = watson
@@ -43,6 +46,11 @@ pub(super) fn cmd_today<S: Storage<Error: std::error::Error + Send + Sync + 'sta
         .collect();
     if frames.is_empty() {
         println!("{}", "No frames recorded today.".bright_black());
+    } else if epic {
+        if config.epics.is_empty() {
+            anyhow::bail!("No epics configured. Add [[epics]] entries to config.toml.");
+        }
+        print_epic_report(&frames, &config.epics, false);
     } else {
         print_report_grouped(&frames, false);
     }
@@ -53,10 +61,17 @@ pub(super) fn cmd_report<S: Storage<Error: std::error::Error + Send + Sync + 'st
     watson: &Watson<S>,
     from: Option<String>,
     to: Option<String>,
+    epic: bool,
+    config: &Config,
 ) -> Result<()> {
     let frames = apply_date_filter(watson.log().map_err(w_err)?, from, to)?;
     if frames.is_empty() {
         println!("{}", "No frames recorded.".bright_black());
+    } else if epic {
+        if config.epics.is_empty() {
+            anyhow::bail!("No epics configured. Add [[epics]] entries to config.toml.");
+        }
+        print_epic_report(&frames, &config.epics, true);
     } else {
         print_report_grouped(&frames, true);
     }

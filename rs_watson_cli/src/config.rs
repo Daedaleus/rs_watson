@@ -7,6 +7,8 @@ pub struct Config {
     pub storage: StorageConfig,
     #[serde(default)]
     pub behavior: BehaviorConfig,
+    #[serde(default)]
+    pub epics: Vec<EpicConfig>,
 }
 
 // --- [storage] -------------------------------------------------------------
@@ -44,14 +46,28 @@ pub struct BehaviorConfig {
     pub allow_future_times: bool,
 }
 
+// --- [epics] ---------------------------------------------------------------
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct EpicConfig {
+    pub name: String,
+    pub project: String,
+    #[serde(default)]
+    pub tags: Vec<String>,
+}
+
 // --- Loading ---------------------------------------------------------------
 
 impl Config {
     pub fn load() -> Result<Self> {
-        let path = dirs::config_dir()
-            .context("Could not determine config directory")?
-            .join("rs_watson")
-            .join("config.toml");
+        let path = if let Ok(dir) = std::env::var("RS_WATSON_CONFIG_DIR") {
+            std::path::PathBuf::from(dir).join("config.toml")
+        } else {
+            dirs::config_dir()
+                .context("Could not determine config directory")?
+                .join("rs_watson")
+                .join("config.toml")
+        };
 
         if !path.exists() {
             return Ok(Config::default());

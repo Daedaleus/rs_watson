@@ -3,6 +3,8 @@ use owo_colors::OwoColorize;
 use rs_watson::Watson;
 use rs_watson_storage::Storage;
 
+use crate::config::Config;
+
 use super::w_err;
 
 pub(super) fn cmd_projects<S: Storage<Error: std::error::Error + Send + Sync + 'static>>(
@@ -28,6 +30,26 @@ pub(super) fn cmd_tags<S: Storage<Error: std::error::Error + Send + Sync + 'stat
     } else {
         for tag in &tags {
             println!("{}", tag.cyan());
+        }
+    }
+    Ok(())
+}
+
+pub(super) fn cmd_epics(config: &Config) -> Result<()> {
+    if config.epics.is_empty() {
+        println!(
+            "{}",
+            "No epics configured. Add [[epics]] entries to config.toml.".bright_black()
+        );
+        return Ok(());
+    }
+    for epic in &config.epics {
+        println!("{}", epic.name.cyan().bold());
+        println!("  project  {}", epic.project.yellow());
+        if epic.tags.is_empty() {
+            println!("  tags     {}", "(any)".bright_black());
+        } else {
+            println!("  tags     {}", epic.tags.join(", ").cyan());
         }
     }
     Ok(())

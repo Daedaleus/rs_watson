@@ -46,6 +46,7 @@ pub(crate) fn cmd_init() -> Result<()> {
             data_dir: None,
         },
         behavior: BehaviorConfig { allow_future_times },
+        epics: vec![],
     };
 
     std::fs::create_dir_all(&config_dir).with_context(|| {

@@ -88,6 +88,7 @@ mod tests {
             behavior: BehaviorConfig {
                 allow_future_times: allow_future,
             },
+            epics: vec![],
         }
     }
 

@@ -9,6 +9,13 @@ fn watson(dir: &TempDir) -> Command {
     cmd
 }
 
+fn watson_cfg(data_dir: &TempDir, config_dir: &TempDir) -> Command {
+    let mut cmd = Command::cargo_bin("watson").unwrap();
+    cmd.env("RS_WATSON_DATA_DIR", data_dir.path());
+    cmd.env("RS_WATSON_CONFIG_DIR", config_dir.path());
+    cmd
+}
+
 // --- status ---
 
 #[test]
@@ -490,6 +497,117 @@ fn import_dry_run_shows_preview_without_saving() {
         .assert()
         .success()
         .stdout(predicates::str::contains("preview-project").not());
+}
+
+// --- epics ---
+
+const EPIC_CONFIG: &str = r#"
+[[epics]]
+name = "Backend Work"
+project = "backend"
+tags = []
+
+[[epics]]
+name = "Refactoring"
+project = "backend"
+tags = ["refactor"]
+"#;
+
+#[test]
+fn epics_lists_configured_epics() {
+    let data = TempDir::new().unwrap();
+    let cfg = TempDir::new().unwrap();
+    std::fs::write(cfg.path().join("config.toml"), EPIC_CONFIG).unwrap();
+
+    watson_cfg(&data, &cfg)
+        .args(["epics"])
+        .assert()
+        .success()
+        .stdout(contains("Backend Work"))
+        .stdout(contains("Refactoring"));
+}
+
+#[test]
+fn epics_shows_message_when_none_configured() {
+    let data = TempDir::new().unwrap();
+    let cfg = TempDir::new().unwrap();
+    std::fs::write(
+        cfg.path().join("config.toml"),
+        "[storage]\nprovider=\"json\"\n",
+    )
+    .unwrap();
+
+    watson_cfg(&data, &cfg)
+        .args(["epics"])
+        .assert()
+        .success()
+        .stdout(contains("No epics configured"));
+}
+
+#[test]
+fn report_epic_groups_by_epic() {
+    let data = TempDir::new().unwrap();
+    let cfg = TempDir::new().unwrap();
+    std::fs::write(cfg.path().join("config.toml"), EPIC_CONFIG).unwrap();
+
+    watson_cfg(&data, &cfg)
+        .args([
+            "add", "-p", "backend", "-t", "refactor", "--from", "08:00", "--to", "09:00",
+        ])
+        .assert()
+        .success();
+    watson_cfg(&data, &cfg)
+        .args(["add", "-p", "backend", "--from", "09:00", "--to", "10:00"])
+        .assert()
+        .success();
+
+    watson_cfg(&data, &cfg)
+        .args(["report", "--epic"])
+        .assert()
+        .success()
+        .stdout(contains("Refactoring"))
+        .stdout(contains("Backend Work"));
+}
+
+#[test]
+fn report_epic_shows_unassigned_for_unmatched_frames() {
+    let data = TempDir::new().unwrap();
+    let cfg = TempDir::new().unwrap();
+    std::fs::write(cfg.path().join("config.toml"), EPIC_CONFIG).unwrap();
+
+    watson_cfg(&data, &cfg)
+        .args(["add", "-p", "frontend", "--from", "08:00", "--to", "09:00"])
+        .assert()
+        .success();
+
+    watson_cfg(&data, &cfg)
+        .args(["report", "--epic"])
+        .assert()
+        .success()
+        .stdout(contains("Unassigned"))
+        .stdout(contains("frontend"));
+}
+
+#[test]
+fn report_epic_fails_without_configured_epics() {
+    let data = TempDir::new().unwrap();
+    let cfg = TempDir::new().unwrap();
+    std::fs::write(
+        cfg.path().join("config.toml"),
+        "[storage]\nprovider=\"json\"\n",
+    )
+    .unwrap();
+
+    watson_cfg(&data, &cfg)
+        .args(["add", "-p", "backend", "--from", "08:00", "--to", "09:00"])
+        .assert()
+        .success();
+
+    watson_cfg(&data, &cfg)
+        .args(["report", "--epic"])
+        .assert()
+        .failure()
+        .stderr(contains("No epics configured"));
 }
 
 // --- invalid time input ---

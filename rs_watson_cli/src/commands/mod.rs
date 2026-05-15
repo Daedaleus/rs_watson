@@ -60,7 +60,11 @@ pub(crate) enum Commands {
         offset: Option<usize>,
     },
     /// Show aggregated report for today
-    Today,
+    Today {
+        /// Group by epic instead of project (requires epics in config.toml)
+        #[arg(long)]
+        epic: bool,
+    },
     /// Show aggregated report for all recorded time
     Report {
         /// Start date filter (YYYY-MM-DD or shortcuts: today, yesterday, week, month)
@@ -69,6 +73,9 @@ pub(crate) enum Commands {
         /// End date filter (YYYY-MM-DD or shortcuts: today, yesterday, week, month)
         #[arg(long, value_name = "DATE")]
         to: Option<String>,
+        /// Group by epic instead of project (requires epics in config.toml)
+        #[arg(long)]
+        epic: bool,
     },
     /// Edit a recorded frame interactively
     Edit,
@@ -100,6 +107,8 @@ pub(crate) enum Commands {
     Tags,
     /// List all projects that have been tracked
     Projects,
+    /// List all configured epics
+    Epics,
     /// Print shell completion script to stdout
     Completions {
         /// Shell to generate completions for
@@ -184,8 +193,8 @@ pub(crate) fn dispatch<S: Storage<Error: std::error::Error + Send + Sync + 'stat
             limit,
             offset,
         } => frames::cmd_log(&watson, from, to, limit, offset),
-        Commands::Today => frames::cmd_today(&watson),
-        Commands::Report { from, to } => frames::cmd_report(&watson, from, to),
+        Commands::Today { epic } => frames::cmd_today(&watson, epic, config),
+        Commands::Report { from, to, epic } => frames::cmd_report(&watson, from, to, epic, config),
         Commands::Add {
             project,
             tags,
@@ -197,6 +206,7 @@ pub(crate) fn dispatch<S: Storage<Error: std::error::Error + Send + Sync + 'stat
         Commands::Rename { from, to } => meta::cmd_rename(&watson, from, to),
         Commands::Projects => meta::cmd_projects(&watson),
         Commands::Tags => meta::cmd_tags(&watson),
+        Commands::Epics => meta::cmd_epics(config),
         Commands::Export {
             format,
             output,
