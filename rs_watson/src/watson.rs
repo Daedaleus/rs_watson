@@ -13,6 +13,8 @@ pub enum WatsonError<E: std::error::Error + 'static> {
     NotTracking,
     #[error("Frame not found")]
     FrameNotFound,
+    #[error("End time must be after start time")]
+    InvalidTimeRange,
     #[error("Storage error: {0}")]
     Storage(E),
 }
@@ -24,6 +26,23 @@ pub struct Watson<S: Storage> {
 impl<S: Storage> Watson<S> {
     pub fn new(storage: S) -> Self {
         Self { storage }
+    }
+
+    pub fn add(
+        &self,
+        project: impl Into<String>,
+        tags: Vec<String>,
+        start: DateTime<Utc>,
+        end: DateTime<Utc>,
+    ) -> Result<Frame, WatsonError<S::Error>> {
+        if end <= start {
+            return Err(WatsonError::InvalidTimeRange);
+        }
+        let frame = Frame::new(project, tags, start, end);
+        let mut records = self.storage.load_frames().map_err(WatsonError::Storage)?;
+        records.push(FrameRecord::from(&frame));
+        self.storage.save_frames(&records).map_err(WatsonError::Storage)?;
+        Ok(frame)
     }
 
     pub fn edit(

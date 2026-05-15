@@ -48,6 +48,21 @@ enum Commands {
     Report,
     /// Edit a recorded frame interactively
     Edit,
+    /// Add a completed frame retroactively
+    Add {
+        /// Project name
+        #[arg(short = 'p', long)]
+        project: String,
+        /// Tags (can be specified multiple times)
+        #[arg(short = 't', long = "tag")]
+        tags: Vec<String>,
+        /// Start time in local time, e.g. 09:00 or 09:00:00
+        #[arg(long, value_name = "HH:MM")]
+        from: String,
+        /// End time in local time, e.g. 17:30 or 17:30:00
+        #[arg(long, value_name = "HH:MM")]
+        to: String,
+    },
     /// List all projects that have been tracked
     Projects,
 }
@@ -245,6 +260,27 @@ fn run() -> Result<()> {
                 fmt_time(updated.end).bright_white(),
             );
             println!("  {}", fmt_duration(updated.end - updated.start).magenta().bold());
+        }
+        Commands::Add { project, tags, from, to } => {
+            let start = parse_at(&from)?;
+            let end   = parse_at(&to)?;
+            let frame = watson
+                .add(&project, tags, start, end)
+                .map_err(|e| anyhow::anyhow!("{e}"))?;
+
+            println!(
+                "{} {}{}",
+                "Added   ".green().bold(),
+                frame.project.yellow().bold(),
+                fmt_tags(&frame.tags),
+            );
+            println!(
+                "  {}  {}  {}",
+                fmt_time(frame.start).bright_white(),
+                "→".white(),
+                fmt_time(frame.end).bright_white(),
+            );
+            println!("  {}", fmt_duration(frame.end - frame.start).magenta().bold());
         }
         Commands::Projects => {
             let projects = watson.projects().map_err(|e| anyhow::anyhow!("{e}"))?;
