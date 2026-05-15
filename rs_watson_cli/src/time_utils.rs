@@ -1,9 +1,26 @@
 use anyhow::{Context, Result};
-use chrono::{DateTime, Local, NaiveTime, TimeZone, Utc};
+use chrono::{DateTime, Datelike, Duration, Local, NaiveDate, NaiveTime, TimeZone, Utc};
 use dialoguer::{Input, theme::ColorfulTheme};
 use owo_colors::OwoColorize;
 
 use crate::config::Config;
+
+/// Parses a date string into a `NaiveDate` in local time.
+/// Accepts `YYYY-MM-DD` or shortcuts: `today`, `yesterday`, `week` (start of current week),
+/// `month` (start of current month).
+pub(crate) fn parse_date(input: &str) -> Result<NaiveDate> {
+    let today = Local::now().date_naive();
+    match input.trim().to_lowercase().as_str() {
+        "today"     => Ok(today),
+        "yesterday" => Ok(today - Duration::days(1)),
+        "week"      => Ok(today - Duration::days(today.weekday().num_days_from_monday() as i64)),
+        "month"     => Ok(today.with_day(1).expect("day 1 always valid")),
+        s => NaiveDate::parse_from_str(s, "%Y-%m-%d")
+            .with_context(|| format!(
+                "Invalid date \"{s}\", expected YYYY-MM-DD or: today, yesterday, week, month"
+            )),
+    }
+}
 
 /// Parses a local time string (HH:MM or HH:MM:SS) relative to today and returns UTC.
 pub(crate) fn parse_at(input: &str) -> Result<DateTime<Utc>> {

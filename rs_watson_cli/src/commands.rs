@@ -8,7 +8,7 @@ use rs_watson_storage::Storage;
 
 use crate::config::{BehaviorConfig, Config, StorageConfig, StorageProvider};
 use crate::format::{fmt_duration, fmt_tags, fmt_time, print_frames_grouped, print_report_grouped};
-use crate::time_utils::{check_future, parse_at, prompt_time};
+use crate::time_utils::{check_future, parse_at, parse_date, prompt_time};
 
 #[derive(Subcommand)]
 pub(crate) enum Commands {
@@ -37,11 +37,25 @@ pub(crate) enum Commands {
     /// Show what is currently being tracked
     Status,
     /// List completed frames, grouped by day
-    Log,
+    Log {
+        /// Start date filter (YYYY-MM-DD or shortcuts: today, yesterday, week, month)
+        #[arg(long, value_name = "DATE")]
+        from: Option<String>,
+        /// End date filter (YYYY-MM-DD or shortcuts: today, yesterday, week, month)
+        #[arg(long, value_name = "DATE")]
+        to: Option<String>,
+    },
     /// Show aggregated report for today
     Today,
     /// Show aggregated report for all recorded time
-    Report,
+    Report {
+        /// Start date filter (YYYY-MM-DD or shortcuts: today, yesterday, week, month)
+        #[arg(long, value_name = "DATE")]
+        from: Option<String>,
+        /// End date filter (YYYY-MM-DD or shortcuts: today, yesterday, week, month)
+        #[arg(long, value_name = "DATE")]
+        to: Option<String>,
+    },
     /// Edit a recorded frame interactively
     Edit,
     /// Add a completed frame retroactively
@@ -59,6 +73,8 @@ pub(crate) enum Commands {
         #[arg(long, value_name = "HH:MM")]
         to: String,
     },
+    /// Remove a recorded frame interactively
+    Remove,
     /// List all projects that have been tracked
     Projects,
 }
@@ -66,6 +82,24 @@ pub(crate) enum Commands {
 /// Converts a Watson error into an anyhow error.
 fn w_err<E: std::fmt::Display>(e: E) -> anyhow::Error {
     anyhow::anyhow!("{e}")
+}
+
+/// Filters frames to those whose local start date falls within [from, to] (both inclusive).
+fn apply_date_filter(
+    frames: Vec<rs_watson::Frame>,
+    from: Option<String>,
+    to: Option<String>,
+) -> Result<Vec<rs_watson::Frame>> {
+    use chrono::Local;
+    let from = from.map(|s| parse_date(&s)).transpose()?;
+    let to   = to.map(|s| parse_date(&s)).transpose()?;
+    Ok(frames
+        .into_iter()
+        .filter(|f| {
+            let d = f.start.with_timezone(&Local).date_naive();
+            from.is_none_or(|fd| d >= fd) && to.is_none_or(|td| d <= td)
+        })
+        .collect())
 }
 
 pub(crate) fn dispatch<S>(watson: Watson<S>, command: Commands, config: &Config) -> Result<()>
@@ -147,10 +181,10 @@ where
             }
         }
 
-        Commands::Log => {
-            let frames = watson.log().map_err(w_err)?;
+        Commands::Log { from, to } => {
+            let frames = apply_date_filter(watson.log().map_err(w_err)?, from, to)?;
             if frames.is_empty() {
-                println!("{}", "No frames recorded yet.".bright_black());
+                println!("{}", "No frames recorded.".bright_black());
             } else {
                 print_frames_grouped(&frames);
             }
@@ -172,10 +206,10 @@ where
             }
         }
 
-        Commands::Report => {
-            let frames = watson.log().map_err(w_err)?;
+        Commands::Report { from, to } => {
+            let frames = apply_date_filter(watson.log().map_err(w_err)?, from, to)?;
             if frames.is_empty() {
-                println!("{}", "No frames recorded yet.".bright_black());
+                println!("{}", "No frames recorded.".bright_black());
             } else {
                 print_report_grouped(&frames, true);
             }
@@ -280,6 +314,64 @@ where
             println!("  {}", fmt_duration(frame.end - frame.start).magenta().bold());
         }
 
+        Commands::Remove => {
+            let frames = watson.log().map_err(w_err)?;
+            if frames.is_empty() {
+                println!("{}", "No frames to remove.".bright_black());
+                return Ok(());
+            }
+
+            let items: Vec<String> = frames
+                .iter()
+                .map(|f| {
+                    format!(
+                        "{}  {} → {}  {:<10}  {}{}",
+                        f.start.format("%Y-%m-%d"),
+                        fmt_time(f.start),
+                        fmt_time(f.end),
+                        fmt_duration(f.end - f.start),
+                        f.project,
+                        if f.tags.is_empty() {
+                            String::new()
+                        } else {
+                            format!("  [{}]", f.tags.join(", "))
+                        },
+                    )
+                })
+                .collect();
+
+            let selection = Select::with_theme(&ColorfulTheme::default())
+                .with_prompt("Select frame to remove")
+                .items(&items)
+                .default(items.len() - 1)
+                .interact()?;
+
+            let frame = &frames[selection];
+
+            let confirmed = Confirm::with_theme(&ColorfulTheme::default())
+                .with_prompt(format!(
+                    "Remove \"{}\" ({} → {})?",
+                    frame.project,
+                    fmt_time(frame.start),
+                    fmt_time(frame.end),
+                ))
+                .default(false)
+                .interact()?;
+
+            if !confirmed {
+                println!("{}", "Aborted.".bright_black());
+                return Ok(());
+            }
+
+            watson.remove(frame.id).map_err(w_err)?;
+            println!(
+                "{} {}{}",
+                "Removed ".red().bold(),
+                frame.project.yellow().bold(),
+                fmt_tags(&frame.tags),
+            );
+        }
+
         Commands::Projects => {
             let projects = watson.projects().map_err(w_err)?;
             if projects.is_empty() {
@@ -316,7 +408,7 @@ pub(crate) fn cmd_init() -> Result<()> {
 
     let provider_idx = Select::with_theme(&ColorfulTheme::default())
         .with_prompt("Storage provider")
-        .items(&["JSON  (frames.json + state.json)", "SQLite  (watson.db)"])
+        .items(["JSON  (frames.json + state.json)", "SQLite  (watson.db)"])
         .default(0)
         .interact()?;
     let provider = match provider_idx {

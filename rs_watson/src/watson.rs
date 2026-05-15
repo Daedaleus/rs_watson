@@ -28,6 +28,17 @@ impl<S: Storage> Watson<S> {
         Self { storage }
     }
 
+    pub fn remove(&self, id: Uuid) -> Result<Frame, WatsonError<S::Error>> {
+        let mut records = self.storage.load_frames().map_err(WatsonError::Storage)?;
+        let pos = records
+            .iter()
+            .position(|r| r.id == id)
+            .ok_or(WatsonError::FrameNotFound)?;
+        let removed = Frame::from(records.remove(pos));
+        self.storage.save_frames(&records).map_err(WatsonError::Storage)?;
+        Ok(removed)
+    }
+
     pub fn add(
         &self,
         project: impl Into<String>,

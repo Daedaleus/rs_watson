@@ -148,7 +148,7 @@ fn log_when_empty_says_no_frames() {
         .args(["log"])
         .assert()
         .success()
-        .stdout(contains("No frames recorded yet"));
+        .stdout(contains("No frames recorded"));
 }
 
 #[test]

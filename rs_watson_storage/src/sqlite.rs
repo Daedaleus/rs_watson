@@ -28,7 +28,7 @@ impl SqliteStorage {
     pub fn new(path: impl AsRef<Path>) -> Result<Self, SqliteStorageError> {
         let mut conn = Connection::open(path)?;
         conn.pragma_update(None, "journal_mode", "WAL")?;
-        conn.pragma_update(None, "foreign_keys", &true)?;
+        conn.pragma_update(None, "foreign_keys", true)?;
 
         let migrations = Migrations::new(vec![
             M::up(include_str!("migrations/001_initial.sql")),
@@ -130,8 +130,8 @@ impl Storage for SqliteStorage {
         );
 
         match result {
-            Err(rusqlite::Error::QueryReturnedNoRows) => return Ok(None),
-            Err(e) => return Err(SqliteStorageError::Rusqlite(e)),
+            Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
+            Err(e) => Err(SqliteStorageError::Rusqlite(e)),
             Ok((project, start)) => {
                 let mut tag_stmt = conn.prepare(
                     "SELECT tag FROM active_frame_tags ORDER BY position",

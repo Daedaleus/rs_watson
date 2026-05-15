@@ -30,10 +30,10 @@ impl Report {
             let entry = project_map
                 .entry(frame.project.clone())
                 .or_insert_with(|| (Duration::zero(), HashMap::new()));
-            entry.0 = entry.0 + duration;
+            entry.0 += duration;
             for tag in &frame.tags {
                 let tag_total = entry.1.entry(tag.clone()).or_insert(Duration::zero());
-                *tag_total = *tag_total + duration;
+                *tag_total += duration;
             }
         }
 

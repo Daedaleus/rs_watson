@@ -33,19 +33,11 @@ impl Default for StorageConfig {
 
 // --- [behavior] ------------------------------------------------------------
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Default, Deserialize, Serialize)]
 pub struct BehaviorConfig {
     /// Allow start, stop and add to accept times in the future. Default: false.
     #[serde(default)]
     pub allow_future_times: bool,
-}
-
-impl Default for BehaviorConfig {
-    fn default() -> Self {
-        BehaviorConfig {
-            allow_future_times: false,
-        }
-    }
 }
 
 // --- Loading ---------------------------------------------------------------
