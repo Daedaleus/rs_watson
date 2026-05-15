@@ -18,11 +18,19 @@ pub(super) fn cmd_log<S: Storage<Error: std::error::Error + Send + Sync + 'stati
     to: Option<String>,
     limit: Option<usize>,
     offset: Option<usize>,
+    config: &Config,
 ) -> Result<()> {
-    let mut frames = apply_date_filter(watson.log().map_err(w_err)?, from, to)?;
+    let mut frames = apply_date_filter(
+        watson.log().map_err(w_err)?,
+        from,
+        to,
+        config.behavior.week_start,
+    )?;
+    let effective_limit =
+        limit.or_else(|| (config.log.default_limit > 0).then_some(config.log.default_limit));
     let total = frames.len();
     let end = total.saturating_sub(offset.unwrap_or(0));
-    let start = end.saturating_sub(limit.unwrap_or(total));
+    let start = end.saturating_sub(effective_limit.unwrap_or(total));
     frames = frames[start..end].to_vec();
     if frames.is_empty() {
         println!("{}", "No frames recorded.".bright_black());
@@ -64,7 +72,12 @@ pub(super) fn cmd_report<S: Storage<Error: std::error::Error + Send + Sync + 'st
     epic: bool,
     config: &Config,
 ) -> Result<()> {
-    let frames = apply_date_filter(watson.log().map_err(w_err)?, from, to)?;
+    let frames = apply_date_filter(
+        watson.log().map_err(w_err)?,
+        from,
+        to,
+        config.behavior.week_start,
+    )?;
     if frames.is_empty() {
         println!("{}", "No frames recorded.".bright_black());
     } else if epic {

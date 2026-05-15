@@ -1,8 +1,8 @@
 use anyhow::{Context, Result};
-use dialoguer::{Confirm, Select, theme::ColorfulTheme};
+use dialoguer::{Confirm, Input, Select, theme::ColorfulTheme};
 use owo_colors::OwoColorize;
 
-use crate::config::{BehaviorConfig, Config, StorageConfig, StorageProvider};
+use crate::config::{BehaviorConfig, Config, LogConfig, StorageConfig, StorageProvider, WeekStart};
 
 pub(crate) fn cmd_init() -> Result<()> {
     let config_dir = dirs::config_dir()
@@ -23,6 +23,7 @@ pub(crate) fn cmd_init() -> Result<()> {
 
     println!();
 
+    // [storage]
     let provider_idx = Select::with_theme(&ColorfulTheme::default())
         .with_prompt("Storage provider")
         .items(["JSON  (frames.json + state.json)", "SQLite  (watson.db)"])
@@ -35,17 +36,41 @@ pub(crate) fn cmd_init() -> Result<()> {
 
     println!();
 
+    // [behavior]
     let allow_future_times = Confirm::with_theme(&ColorfulTheme::default())
         .with_prompt("Allow future times for start, stop and add?")
         .default(false)
         .interact()?;
+
+    let week_start_idx = Select::with_theme(&ColorfulTheme::default())
+        .with_prompt("First day of week (for --from week)")
+        .items(["Monday", "Sunday"])
+        .default(0)
+        .interact()?;
+    let week_start = match week_start_idx {
+        1 => WeekStart::Sunday,
+        _ => WeekStart::Monday,
+    };
+
+    println!();
+
+    // [log]
+    let default_limit_str: String = Input::with_theme(&ColorfulTheme::default())
+        .with_prompt("Default number of frames shown by 'log'  (0 = show all)")
+        .with_initial_text("0")
+        .interact_text()?;
+    let default_limit = default_limit_str.trim().parse::<usize>().unwrap_or(0);
 
     let config = Config {
         storage: StorageConfig {
             provider,
             data_dir: None,
         },
-        behavior: BehaviorConfig { allow_future_times },
+        behavior: BehaviorConfig {
+            allow_future_times,
+            week_start,
+        },
+        log: LogConfig { default_limit },
         epics: vec![],
     };
 

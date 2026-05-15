@@ -7,6 +7,7 @@ use owo_colors::OwoColorize;
 use rs_watson::Watson;
 use rs_watson_storage::Storage;
 
+use crate::config::Config;
 use crate::format::{fmt_tags, fmt_time};
 
 use super::{apply_date_filter, w_err};
@@ -27,11 +28,17 @@ pub(super) fn cmd_export<S: Storage<Error: std::error::Error + Send + Sync + 'st
     output: Option<String>,
     from: Option<String>,
     to: Option<String>,
+    config: &Config,
 ) -> Result<()> {
     use rs_watson_export::Exporter;
     use rs_watson_export::csv::CsvExporter;
 
-    let frames = apply_date_filter(watson.log().map_err(w_err)?, from, to)?;
+    let frames = apply_date_filter(
+        watson.log().map_err(w_err)?,
+        from,
+        to,
+        config.behavior.week_start,
+    )?;
     if frames.is_empty() {
         println!("{}", "No frames to export.".bright_black());
         return Ok(());

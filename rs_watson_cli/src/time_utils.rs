@@ -3,17 +3,23 @@ use chrono::{DateTime, Datelike, Duration, Local, NaiveDate, NaiveTime, TimeZone
 use dialoguer::{Input, theme::ColorfulTheme};
 use owo_colors::OwoColorize;
 
-use crate::config::Config;
+use crate::config::{Config, WeekStart};
 
 /// Parses a date string into a `NaiveDate` in local time.
-/// Accepts `YYYY-MM-DD` or shortcuts: `today`, `yesterday`, `week` (start of current week),
-/// `month` (start of current month).
-pub(crate) fn parse_date(input: &str) -> Result<NaiveDate> {
+/// Accepts `YYYY-MM-DD` or shortcuts: `today`, `yesterday`, `week`, `month`.
+/// The `week` shortcut respects `week_start` (Monday or Sunday).
+pub(crate) fn parse_date(input: &str, week_start: WeekStart) -> Result<NaiveDate> {
     let today = Local::now().date_naive();
     match input.trim().to_lowercase().as_str() {
         "today" => Ok(today),
         "yesterday" => Ok(today - Duration::days(1)),
-        "week" => Ok(today - Duration::days(today.weekday().num_days_from_monday() as i64)),
+        "week" => {
+            let days_back = match week_start {
+                WeekStart::Monday => today.weekday().num_days_from_monday() as i64,
+                WeekStart::Sunday => today.weekday().num_days_from_sunday() as i64,
+            };
+            Ok(today - Duration::days(days_back))
+        }
         "month" => Ok(today.with_day(1).expect("day 1 always valid")),
         s => NaiveDate::parse_from_str(s, "%Y-%m-%d").with_context(|| {
             format!("Invalid date \"{s}\", expected YYYY-MM-DD or: today, yesterday, week, month")
@@ -76,7 +82,7 @@ pub(crate) fn check_future(dt: DateTime<Utc>, config: &Config) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config::{BehaviorConfig, StorageConfig, StorageProvider};
+    use crate::config::{BehaviorConfig, LogConfig, StorageConfig, StorageProvider, WeekStart};
     use chrono::Duration;
 
     fn cfg(allow_future: bool) -> Config {
@@ -87,7 +93,9 @@ mod tests {
             },
             behavior: BehaviorConfig {
                 allow_future_times: allow_future,
+                week_start: WeekStart::Monday,
             },
+            log: LogConfig::default(),
             epics: vec![],
         }
     }
@@ -96,40 +104,53 @@ mod tests {
 
     #[test]
     fn parse_date_accepts_iso_format() {
-        let d = parse_date("2026-05-15").unwrap();
+        let d = parse_date("2026-05-15", WeekStart::Monday).unwrap();
         assert_eq!(d, NaiveDate::from_ymd_opt(2026, 5, 15).unwrap());
     }
 
     #[test]
     fn parse_date_today_equals_local_today() {
-        assert_eq!(parse_date("today").unwrap(), Local::now().date_naive());
+        assert_eq!(
+            parse_date("today", WeekStart::Monday).unwrap(),
+            Local::now().date_naive()
+        );
     }
 
     #[test]
     fn parse_date_yesterday_is_one_day_before_today() {
         let expected = Local::now().date_naive() - Duration::days(1);
-        assert_eq!(parse_date("yesterday").unwrap(), expected);
+        assert_eq!(
+            parse_date("yesterday", WeekStart::Monday).unwrap(),
+            expected
+        );
     }
 
     #[test]
-    fn parse_date_week_is_start_of_current_week() {
+    fn parse_date_week_monday_start() {
         let today = Local::now().date_naive();
         let expected = today - Duration::days(today.weekday().num_days_from_monday() as i64);
-        assert_eq!(parse_date("week").unwrap(), expected);
+        assert_eq!(parse_date("week", WeekStart::Monday).unwrap(), expected);
+    }
+
+    #[test]
+    fn parse_date_week_sunday_start() {
+        let today = Local::now().date_naive();
+        let expected = today - Duration::days(today.weekday().num_days_from_sunday() as i64);
+        assert_eq!(parse_date("week", WeekStart::Sunday).unwrap(), expected);
     }
 
     #[test]
     fn parse_date_month_is_first_of_current_month() {
         let today = Local::now().date_naive();
         let expected = today.with_day(1).unwrap();
-        assert_eq!(parse_date("month").unwrap(), expected);
+        assert_eq!(parse_date("month", WeekStart::Monday).unwrap(), expected);
     }
 
     #[test]
     fn parse_date_rejects_invalid() {
-        assert!(parse_date("invalid").is_err());
-        assert!(parse_date("2026/05/15").is_err());
-        assert!(parse_date("").is_err());
+        assert!(parse_date("invalid", WeekStart::Monday).is_err());
+        assert!(parse_date("2026/05/15", WeekStart::Monday).is_err());
+        assert!(parse_date("", WeekStart::Monday).is_err());
     }
 
     // --- parse_at ---

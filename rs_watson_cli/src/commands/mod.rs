@@ -9,7 +9,7 @@ use clap::Subcommand;
 use rs_watson::Watson;
 use rs_watson_storage::Storage;
 
-use crate::config::Config;
+use crate::config::{Config, WeekStart};
 use crate::time_utils::parse_date;
 
 pub(crate) use init::cmd_init;
@@ -151,14 +151,15 @@ fn w_err<E: std::fmt::Display>(e: E) -> anyhow::Error {
     anyhow::anyhow!("{e}")
 }
 
-fn apply_date_filter(
+pub(super) fn apply_date_filter(
     frames: Vec<rs_watson::Frame>,
     from: Option<String>,
     to: Option<String>,
+    week_start: WeekStart,
 ) -> Result<Vec<rs_watson::Frame>> {
     use chrono::Local;
-    let from = from.map(|s| parse_date(&s)).transpose()?;
-    let to = to.map(|s| parse_date(&s)).transpose()?;
+    let from = from.map(|s| parse_date(&s, week_start)).transpose()?;
+    let to = to.map(|s| parse_date(&s, week_start)).transpose()?;
     Ok(frames
         .into_iter()
         .filter(|f| {
@@ -192,7 +193,7 @@ pub(crate) fn dispatch<S: Storage<Error: std::error::Error + Send + Sync + 'stat
             to,
             limit,
             offset,
-        } => frames::cmd_log(&watson, from, to, limit, offset),
+        } => frames::cmd_log(&watson, from, to, limit, offset, config),
         Commands::Today { epic } => frames::cmd_today(&watson, epic, config),
         Commands::Report { from, to, epic } => frames::cmd_report(&watson, from, to, epic, config),
         Commands::Add {
@@ -212,7 +213,7 @@ pub(crate) fn dispatch<S: Storage<Error: std::error::Error + Send + Sync + 'stat
             output,
             from,
             to,
-        } => io::cmd_export(&watson, format, output, from, to),
+        } => io::cmd_export(&watson, format, output, from, to, config),
         Commands::Import {
             source,
             file,

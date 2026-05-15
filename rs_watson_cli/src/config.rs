@@ -8,6 +8,8 @@ pub struct Config {
     #[serde(default)]
     pub behavior: BehaviorConfig,
     #[serde(default)]
+    pub log: LogConfig,
+    #[serde(default)]
     pub epics: Vec<EpicConfig>,
 }
 
@@ -15,15 +17,18 @@ pub struct Config {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct StorageConfig {
+    /// Storage backend. Default: json.
+    #[serde(default)]
     pub provider: StorageProvider,
     /// Custom data directory. Overridden by RS_WATSON_DATA_DIR env var.
     #[serde(default)]
     pub data_dir: Option<String>,
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone, Copy)]
+#[derive(Debug, Deserialize, Serialize, Clone, Copy, Default)]
 #[serde(rename_all = "lowercase")]
 pub enum StorageProvider {
+    #[default]
     Json,
     Sqlite,
 }
@@ -44,6 +49,26 @@ pub struct BehaviorConfig {
     /// Allow start, stop and add to accept times in the future. Default: false.
     #[serde(default)]
     pub allow_future_times: bool,
+    /// First day of the week for the "week" date shortcut. Default: monday.
+    #[serde(default)]
+    pub week_start: WeekStart,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone, Copy, Default, PartialEq)]
+#[serde(rename_all = "lowercase")]
+pub enum WeekStart {
+    #[default]
+    Monday,
+    Sunday,
+}
+
+// --- [log] -----------------------------------------------------------------
+
+#[derive(Debug, Default, Deserialize, Serialize)]
+pub struct LogConfig {
+    /// Default number of frames shown by `watson log` (0 = show all). Default: 0.
+    #[serde(default)]
+    pub default_limit: usize,
 }
 
 // --- [epics] ---------------------------------------------------------------
