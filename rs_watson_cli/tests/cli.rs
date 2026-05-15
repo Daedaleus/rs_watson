@@ -1,4 +1,5 @@
 use assert_cmd::Command;
+use predicates::prelude::PredicateBooleanExt;
 use predicates::str::contains;
 use tempfile::TempDir;
 
@@ -287,6 +288,208 @@ fn rename_unknown_project_fails() {
         .assert()
         .failure()
         .stderr(contains("not found"));
+}
+
+// --- overlap detection ---
+
+#[test]
+fn add_fails_when_frames_overlap() {
+    let dir = TempDir::new().unwrap();
+    watson(&dir)
+        .args(["add", "-p", "backend", "--from", "08:00", "--to", "10:00"])
+        .assert()
+        .success();
+    watson(&dir)
+        .args(["add", "-p", "frontend", "--from", "09:00", "--to", "11:00"])
+        .assert()
+        .failure()
+        .stderr(contains("overlap"));
+}
+
+#[test]
+fn start_fails_when_time_overlaps_existing_frame() {
+    let dir = TempDir::new().unwrap();
+    watson(&dir)
+        .args(["add", "-p", "backend", "--from", "08:00", "--to", "10:00"])
+        .assert()
+        .success();
+    watson(&dir)
+        .args(["start", "-p", "frontend", "--at", "09:00"])
+        .assert()
+        .failure()
+        .stderr(contains("overlap"));
+}
+
+#[test]
+fn adjacent_frames_are_allowed() {
+    let dir = TempDir::new().unwrap();
+    watson(&dir)
+        .args(["add", "-p", "backend", "--from", "08:00", "--to", "09:00"])
+        .assert()
+        .success();
+    watson(&dir)
+        .args(["add", "-p", "frontend", "--from", "09:00", "--to", "10:00"])
+        .assert()
+        .success();
+}
+
+// --- --limit ---
+
+#[test]
+fn log_limit_shows_last_n_frames() {
+    let dir = TempDir::new().unwrap();
+    watson(&dir)
+        .args(["add", "-p", "first", "--from", "01:00", "--to", "01:30"])
+        .assert()
+        .success();
+    watson(&dir)
+        .args(["add", "-p", "second", "--from", "02:00", "--to", "02:30"])
+        .assert()
+        .success();
+    watson(&dir)
+        .args(["add", "-p", "third", "--from", "03:00", "--to", "03:30"])
+        .assert()
+        .success();
+    let out = watson(&dir).args(["log", "--limit", "2"]).output().unwrap();
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    assert!(stdout.contains("second"));
+    assert!(stdout.contains("third"));
+    assert!(!stdout.contains("first"));
+}
+
+// --- tags ---
+
+#[test]
+fn tags_lists_all_used_tags() {
+    let dir = TempDir::new().unwrap();
+    watson(&dir)
+        .args([
+            "add", "-p", "backend", "-t", "api", "-t", "auth", "--from", "08:00", "--to", "09:00",
+        ])
+        .assert()
+        .success();
+    watson(&dir)
+        .args(["tags"])
+        .assert()
+        .success()
+        .stdout(contains("api"))
+        .stdout(contains("auth"));
+}
+
+// --- export ---
+
+#[test]
+fn export_csv_to_stdout_has_header_and_data() {
+    let dir = TempDir::new().unwrap();
+    watson(&dir)
+        .args([
+            "add", "-p", "backend", "-t", "api", "--from", "08:00", "--to", "09:00",
+        ])
+        .assert()
+        .success();
+    watson(&dir)
+        .args(["export"])
+        .assert()
+        .success()
+        .stdout(contains("id,project,tags,start,end,duration_seconds"))
+        .stdout(contains("backend"))
+        .stdout(contains("api"))
+        .stdout(contains("3600"));
+}
+
+#[test]
+fn export_csv_to_file() {
+    let dir = TempDir::new().unwrap();
+    watson(&dir)
+        .args(["add", "-p", "backend", "--from", "08:00", "--to", "09:00"])
+        .assert()
+        .success();
+    let output_file = dir.path().join("export.csv");
+    watson(&dir)
+        .args(["export", "--output", output_file.to_str().unwrap()])
+        .assert()
+        .success()
+        .stdout(contains("Exported"))
+        .stdout(contains("1"));
+    assert!(output_file.exists());
+    let content = std::fs::read_to_string(&output_file).unwrap();
+    assert!(content.starts_with("id,project,tags"));
+    assert!(content.contains("backend"));
+}
+
+#[test]
+fn export_timestamps_use_z_suffix() {
+    let dir = TempDir::new().unwrap();
+    watson(&dir)
+        .args(["add", "-p", "backend", "--from", "08:00", "--to", "09:00"])
+        .assert()
+        .success();
+    watson(&dir)
+        .args(["export"])
+        .assert()
+        .success()
+        .stdout(contains("Z"))
+        .stdout(predicates::str::contains("+00:00").not());
+}
+
+// --- import ---
+
+#[test]
+fn import_watson_format() {
+    let dir = TempDir::new().unwrap();
+    let watson_file = dir.path().join("watson_frames");
+    std::fs::write(
+        &watson_file,
+        r#"[
+            ["abc123", 1620000000, 1620003600, "imported-project", 1620003600, ["tag1"]],
+            ["def456", 1620100000, 1620103600, "other-project",    1620103600, []]
+        ]"#,
+    )
+    .unwrap();
+
+    watson(&dir)
+        .args(["import", "--file", watson_file.to_str().unwrap()])
+        .assert()
+        .success()
+        .stdout(contains("Imported"))
+        .stdout(contains("2"));
+
+    watson(&dir)
+        .args(["projects"])
+        .assert()
+        .success()
+        .stdout(contains("imported-project"))
+        .stdout(contains("other-project"));
+}
+
+#[test]
+fn import_dry_run_shows_preview_without_saving() {
+    let dir = TempDir::new().unwrap();
+    let watson_file = dir.path().join("watson_frames");
+    std::fs::write(
+        &watson_file,
+        r#"[["abc", 1620000000, 1620003600, "preview-project", 1620003600, []]]"#,
+    )
+    .unwrap();
+
+    watson(&dir)
+        .args([
+            "import",
+            "--file",
+            watson_file.to_str().unwrap(),
+            "--dry-run",
+        ])
+        .assert()
+        .success()
+        .stdout(contains("dry run"))
+        .stdout(contains("preview-project"));
+
+    // nothing was actually saved
+    watson(&dir)
+        .args(["projects"])
+        .assert()
+        .success()
+        .stdout(predicates::str::contains("preview-project").not());
 }
 
 // --- invalid time input ---

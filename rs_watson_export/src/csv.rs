@@ -26,8 +26,10 @@ impl Exporter for CsvExporter {
                 frame.id.to_string(),
                 frame.project.clone(),
                 frame.tags.join("|"),
-                frame.start.to_rfc3339(),
-                frame.end.to_rfc3339(),
+                frame
+                    .start
+                    .to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+                frame.end.to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
                 (frame.end - frame.start).num_seconds().to_string(),
             ])?;
         }

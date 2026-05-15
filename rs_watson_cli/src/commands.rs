@@ -120,6 +120,9 @@ pub(crate) enum Commands {
         /// Path to the source file (default: ~/.local/share/watson/frames)
         #[arg(long, value_name = "FILE")]
         file: Option<String>,
+        /// Preview what would be imported without making changes
+        #[arg(long)]
+        dry_run: bool,
     },
 }
 
@@ -524,7 +527,11 @@ where
             }
         }
 
-        Commands::Import { source, file } => {
+        Commands::Import {
+            source,
+            file,
+            dry_run,
+        } => {
             let path = match (source, file) {
                 (ImportSource::Watson, Some(p)) => std::path::PathBuf::from(p),
                 (ImportSource::Watson, None) => dirs::data_dir()
@@ -538,14 +545,33 @@ where
 
             let frames = parse_watson_frames(&content)?;
             let count = frames.len();
-            watson.import_frames(frames).map_err(w_err)?;
 
-            println!(
-                "{} {} {}",
-                "Imported".green().bold(),
-                count.to_string().yellow().bold(),
-                "frames from Watson.".bright_black(),
-            );
+            if dry_run {
+                println!(
+                    "{} {} {} {}",
+                    "Would import".bright_black(),
+                    count.to_string().yellow().bold(),
+                    "frames".bright_black(),
+                    "(dry run — no changes made)".bright_black(),
+                );
+                for frame in &frames {
+                    println!(
+                        "  {}  {}  {}{}",
+                        fmt_time(frame.start).bright_white(),
+                        fmt_time(frame.end).bright_white(),
+                        frame.project.yellow().bold(),
+                        fmt_tags(&frame.tags),
+                    );
+                }
+            } else {
+                watson.import_frames(frames).map_err(w_err)?;
+                println!(
+                    "{} {} {}",
+                    "Imported".green().bold(),
+                    count.to_string().yellow().bold(),
+                    "frames from Watson.".bright_black(),
+                );
+            }
         }
     }
 
