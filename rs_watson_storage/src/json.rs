@@ -118,7 +118,7 @@ mod tests {
         assert_eq!(loaded[0].project, "backend");
         assert_eq!(loaded[0].tags, vec!["api"]);
         assert_eq!(loaded[0].start, t(9));
-        assert_eq!(loaded[0].end,   t(10));
+        assert_eq!(loaded[0].end, t(10));
     }
 
     #[test]
@@ -134,7 +134,12 @@ mod tests {
     #[test]
     fn load_frames_missing_file_returns_empty() {
         let dir = tempfile::tempdir().unwrap();
-        assert!(JsonStorage::new(dir.path()).load_frames().unwrap().is_empty());
+        assert!(
+            JsonStorage::new(dir.path())
+                .load_frames()
+                .unwrap()
+                .is_empty()
+        );
     }
 
     #[test]
@@ -151,7 +156,12 @@ mod tests {
     #[test]
     fn load_active_missing_file_returns_none() {
         let dir = tempfile::tempdir().unwrap();
-        assert!(JsonStorage::new(dir.path()).load_active().unwrap().is_none());
+        assert!(
+            JsonStorage::new(dir.path())
+                .load_active()
+                .unwrap()
+                .is_none()
+        );
     }
 
     #[test]

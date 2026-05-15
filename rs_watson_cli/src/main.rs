@@ -55,7 +55,11 @@ fn run() -> Result<()> {
 
     match config.storage.provider {
         StorageProvider::Json => {
-            dispatch(Watson::new(JsonStorage::new(&data_dir)), cli.command, &config)?;
+            dispatch(
+                Watson::new(JsonStorage::new(&data_dir)),
+                cli.command,
+                &config,
+            )?;
         }
         StorageProvider::Sqlite => {
             let storage = SqliteStorage::new(data_dir.join("watson.db"))

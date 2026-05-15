@@ -1,7 +1,7 @@
 use chrono::{DateTime, Utc};
 use rs_watson_storage::{ActiveFrameRecord, FrameRecord, Storage};
-use uuid::Uuid;
 use thiserror::Error;
+use uuid::Uuid;
 
 use crate::{ActiveFrame, Frame};
 
@@ -51,7 +51,9 @@ impl<S: Storage> Watson<S> {
             if let Some(mut active) = self.storage.load_active().map_err(WatsonError::Storage)? {
                 if active.project == from {
                     active.project = to.clone();
-                    self.storage.save_active(Some(&active)).map_err(WatsonError::Storage)?;
+                    self.storage
+                        .save_active(Some(&active))
+                        .map_err(WatsonError::Storage)?;
                     true
                 } else {
                     false
@@ -63,7 +65,9 @@ impl<S: Storage> Watson<S> {
         if count == 0 && !active_updated {
             return Err(WatsonError::ProjectNotFound(from.to_string()));
         }
-        self.storage.save_frames(&records).map_err(WatsonError::Storage)?;
+        self.storage
+            .save_frames(&records)
+            .map_err(WatsonError::Storage)?;
         Ok(count + usize::from(active_updated))
     }
 
@@ -74,7 +78,9 @@ impl<S: Storage> Watson<S> {
             .position(|r| r.id == id)
             .ok_or(WatsonError::FrameNotFound)?;
         let removed = Frame::from(records.remove(pos));
-        self.storage.save_frames(&records).map_err(WatsonError::Storage)?;
+        self.storage
+            .save_frames(&records)
+            .map_err(WatsonError::Storage)?;
         Ok(removed)
     }
 
@@ -91,7 +97,9 @@ impl<S: Storage> Watson<S> {
         let frame = Frame::new(project, tags, start, end);
         let mut records = self.storage.load_frames().map_err(WatsonError::Storage)?;
         records.push(FrameRecord::from(&frame));
-        self.storage.save_frames(&records).map_err(WatsonError::Storage)?;
+        self.storage
+            .save_frames(&records)
+            .map_err(WatsonError::Storage)?;
         Ok(frame)
     }
 
@@ -108,9 +116,17 @@ impl<S: Storage> Watson<S> {
             .iter()
             .position(|r| r.id == id)
             .ok_or(WatsonError::FrameNotFound)?;
-        let frame = Frame { id, project: project.into(), tags, start, end };
+        let frame = Frame {
+            id,
+            project: project.into(),
+            tags,
+            start,
+            end,
+        };
         records[pos] = FrameRecord::from(&frame);
-        self.storage.save_frames(&records).map_err(WatsonError::Storage)?;
+        self.storage
+            .save_frames(&records)
+            .map_err(WatsonError::Storage)?;
         Ok(frame)
     }
 
@@ -120,8 +136,23 @@ impl<S: Storage> Watson<S> {
             .load_active()
             .map_err(WatsonError::Storage)?
             .ok_or(WatsonError::NotTracking)?;
-        self.storage.save_active(None).map_err(WatsonError::Storage)?;
+        self.storage
+            .save_active(None)
+            .map_err(WatsonError::Storage)?;
         Ok(ActiveFrame::from(active))
+    }
+
+    pub fn tags(&self) -> Result<Vec<String>, WatsonError<S::Error>> {
+        let mut tags: Vec<String> = self
+            .storage
+            .load_frames()
+            .map_err(WatsonError::Storage)?
+            .into_iter()
+            .flat_map(|r| r.tags)
+            .collect();
+        tags.sort();
+        tags.dedup();
+        Ok(tags)
     }
 
     pub fn projects(&self) -> Result<Vec<String>, WatsonError<S::Error>> {
@@ -168,8 +199,12 @@ impl<S: Storage> Watson<S> {
 
         let mut frames = self.storage.load_frames().map_err(WatsonError::Storage)?;
         frames.push(FrameRecord::from(&frame));
-        self.storage.save_frames(&frames).map_err(WatsonError::Storage)?;
-        self.storage.save_active(None).map_err(WatsonError::Storage)?;
+        self.storage
+            .save_frames(&frames)
+            .map_err(WatsonError::Storage)?;
+        self.storage
+            .save_active(None)
+            .map_err(WatsonError::Storage)?;
 
         Ok(frame)
     }
@@ -185,18 +220,19 @@ impl<S: Storage> Watson<S> {
         }
         let frame = ActiveFrame::new(project, tags, at);
         let record = ActiveFrameRecord::from(&frame);
-        self.storage.save_active(Some(&record)).map_err(WatsonError::Storage)?;
+        self.storage
+            .save_active(Some(&record))
+            .map_err(WatsonError::Storage)?;
         Ok(frame)
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::cell::RefCell;
     use chrono::{Duration, TimeZone, Utc};
     use rs_watson_storage::{ActiveFrameRecord, FrameRecord, Storage};
+    use std::cell::RefCell;
 
     struct MemoryStorage {
         frames: RefCell<Vec<FrameRecord>>,
@@ -283,7 +319,10 @@ mod tests {
     #[test]
     fn stop_when_not_tracking_returns_error() {
         let w = w();
-        assert!(matches!(w.stop(t(10, 0)).unwrap_err(), WatsonError::NotTracking));
+        assert!(matches!(
+            w.stop(t(10, 0)).unwrap_err(),
+            WatsonError::NotTracking
+        ));
     }
 
     // --- cancel ---
@@ -309,7 +348,9 @@ mod tests {
     #[test]
     fn add_creates_saved_frame() {
         let w = w();
-        let f = w.add("backend", vec!["api".into()], t(9, 0), t(10, 0)).unwrap();
+        let f = w
+            .add("backend", vec!["api".into()], t(9, 0), t(10, 0))
+            .unwrap();
         assert_eq!(f.project, "backend");
         assert_eq!(f.end - f.start, Duration::hours(1));
         assert_eq!(w.log().unwrap().len(), 1);
@@ -340,7 +381,13 @@ mod tests {
         let w = w();
         let original = w.add("backend", vec![], t(9, 0), t(10, 0)).unwrap();
         let updated = w
-            .edit(original.id, "frontend", vec!["ui".into()], t(9, 30), t(11, 0))
+            .edit(
+                original.id,
+                "frontend",
+                vec!["ui".into()],
+                t(9, 30),
+                t(11, 0),
+            )
             .unwrap();
         assert_eq!(updated.project, "frontend");
         assert_eq!(updated.tags, vec!["ui"]);
@@ -351,7 +398,8 @@ mod tests {
     fn edit_unknown_id_returns_error() {
         let w = w();
         assert!(matches!(
-            w.edit(Uuid::new_v4(), "x", vec![], t(9, 0), t(10, 0)).unwrap_err(),
+            w.edit(Uuid::new_v4(), "x", vec![], t(9, 0), t(10, 0))
+                .unwrap_err(),
             WatsonError::FrameNotFound
         ));
     }
@@ -369,7 +417,9 @@ mod tests {
     #[test]
     fn remove_returns_deleted_frame() {
         let w = w();
-        let frame = w.add("backend", vec!["api".into()], t(9, 0), t(10, 0)).unwrap();
+        let frame = w
+            .add("backend", vec!["api".into()], t(9, 0), t(10, 0))
+            .unwrap();
         let removed = w.remove(frame.id).unwrap();
         assert_eq!(removed.project, "backend");
         assert_eq!(removed.tags, vec!["api"]);
@@ -422,7 +472,7 @@ mod tests {
     fn log_returns_frames_sorted_by_start_ascending() {
         let w = w();
         w.add("second", vec![], t(10, 0), t(11, 0)).unwrap();
-        w.add("first",  vec![], t(8,  0), t(9,  0)).unwrap();
+        w.add("first", vec![], t(8, 0), t(9, 0)).unwrap();
         let frames = w.log().unwrap();
         assert_eq!(frames[0].project, "first");
         assert_eq!(frames[1].project, "second");
@@ -433,10 +483,27 @@ mod tests {
     #[test]
     fn projects_returns_unique_sorted_names() {
         let w = w();
-        w.add("backend",  vec![], t(9,  0), t(10, 0)).unwrap();
+        w.add("backend", vec![], t(9, 0), t(10, 0)).unwrap();
         w.add("frontend", vec![], t(10, 0), t(11, 0)).unwrap();
-        w.add("backend",  vec![], t(11, 0), t(12, 0)).unwrap();
+        w.add("backend", vec![], t(11, 0), t(12, 0)).unwrap();
         assert_eq!(w.projects().unwrap(), vec!["backend", "frontend"]);
+    }
+
+    // --- tags ---
+
+    #[test]
+    fn tags_returns_unique_sorted_tags() {
+        let w = w();
+        w.add("a", vec!["beta".into(), "alpha".into()], t(9, 0), t(10, 0))
+            .unwrap();
+        w.add("b", vec!["alpha".into(), "gamma".into()], t(10, 0), t(11, 0))
+            .unwrap();
+        assert_eq!(w.tags().unwrap(), vec!["alpha", "beta", "gamma"]);
+    }
+
+    #[test]
+    fn tags_returns_empty_when_no_frames() {
+        assert!(w().tags().unwrap().is_empty());
     }
 
     // --- status ---

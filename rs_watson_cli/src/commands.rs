@@ -82,6 +82,8 @@ pub(crate) enum Commands {
         /// New project name
         to: String,
     },
+    /// List all tags that have been used
+    Tags,
     /// List all projects that have been tracked
     Projects,
     /// Print shell completion script to stdout
@@ -104,7 +106,7 @@ fn apply_date_filter(
 ) -> Result<Vec<rs_watson::Frame>> {
     use chrono::Local;
     let from = from.map(|s| parse_date(&s)).transpose()?;
-    let to   = to.map(|s| parse_date(&s)).transpose()?;
+    let to = to.map(|s| parse_date(&s)).transpose()?;
     Ok(frames
         .into_iter()
         .filter(|f| {
@@ -123,7 +125,10 @@ where
         Commands::Init | Commands::Completions { .. } => unreachable!("handled before dispatch"),
 
         Commands::Start { project, tags, at } => {
-            let time = at.map(|s| parse_at(&s)).transpose()?.unwrap_or_else(Utc::now);
+            let time = at
+                .map(|s| parse_at(&s))
+                .transpose()?
+                .unwrap_or_else(Utc::now);
             check_future(time, config)?;
             let frame = watson.start(&project, tags, time).map_err(w_err)?;
             println!(
@@ -136,7 +141,10 @@ where
         }
 
         Commands::Stop { at } => {
-            let time = at.map(|s| parse_at(&s)).transpose()?.unwrap_or_else(Utc::now);
+            let time = at
+                .map(|s| parse_at(&s))
+                .transpose()?
+                .unwrap_or_else(Utc::now);
             check_future(time, config)?;
             let frame = watson.stop(time).map_err(w_err)?;
             println!(
@@ -151,7 +159,10 @@ where
                 "→".white(),
                 fmt_time(frame.end).bright_white(),
             );
-            println!("  {}", fmt_duration(frame.end - frame.start).magenta().bold());
+            println!(
+                "  {}",
+                fmt_duration(frame.end - frame.start).magenta().bold()
+            );
         }
 
         Commands::Cancel => {
@@ -279,7 +290,7 @@ where
                 .collect();
 
             let new_start = prompt_time("Start (HH:MM or HH:MM:SS)", frame.start)?;
-            let new_end   = prompt_time("End   (HH:MM or HH:MM:SS)", frame.end)?;
+            let new_end = prompt_time("End   (HH:MM or HH:MM:SS)", frame.end)?;
 
             if new_end <= new_start {
                 anyhow::bail!("End time must be after start time");
@@ -302,12 +313,20 @@ where
                 "→".white(),
                 fmt_time(updated.end).bright_white(),
             );
-            println!("  {}", fmt_duration(updated.end - updated.start).magenta().bold());
+            println!(
+                "  {}",
+                fmt_duration(updated.end - updated.start).magenta().bold()
+            );
         }
 
-        Commands::Add { project, tags, from, to } => {
+        Commands::Add {
+            project,
+            tags,
+            from,
+            to,
+        } => {
             let start = parse_at(&from)?;
-            let end   = parse_at(&to)?;
+            let end = parse_at(&to)?;
             check_future(start, config)?;
             check_future(end, config)?;
             let frame = watson.add(&project, tags, start, end).map_err(w_err)?;
@@ -323,7 +342,10 @@ where
                 "→".white(),
                 fmt_time(frame.end).bright_white(),
             );
-            println!("  {}", fmt_duration(frame.end - frame.start).magenta().bold());
+            println!(
+                "  {}",
+                fmt_duration(frame.end - frame.start).magenta().bold()
+            );
         }
 
         Commands::Remove => {
@@ -396,6 +418,17 @@ where
             );
         }
 
+        Commands::Tags => {
+            let tags = watson.tags().map_err(w_err)?;
+            if tags.is_empty() {
+                println!("{}", "No tags recorded yet.".bright_black());
+            } else {
+                for tag in &tags {
+                    println!("{}", tag.cyan());
+                }
+            }
+        }
+
         Commands::Projects => {
             let projects = watson.projects().map_err(w_err)?;
             if projects.is_empty() {
@@ -452,8 +485,12 @@ pub(crate) fn cmd_init() -> Result<()> {
         behavior: BehaviorConfig { allow_future_times },
     };
 
-    std::fs::create_dir_all(&config_dir)
-        .with_context(|| format!("Could not create config directory: {}", config_dir.display()))?;
+    std::fs::create_dir_all(&config_dir).with_context(|| {
+        format!(
+            "Could not create config directory: {}",
+            config_dir.display()
+        )
+    })?;
 
     let content = toml::to_string(&config).context("Could not serialize config")?;
     std::fs::write(&config_path, &content)

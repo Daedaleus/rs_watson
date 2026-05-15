@@ -11,14 +11,13 @@ use crate::config::Config;
 pub(crate) fn parse_date(input: &str) -> Result<NaiveDate> {
     let today = Local::now().date_naive();
     match input.trim().to_lowercase().as_str() {
-        "today"     => Ok(today),
+        "today" => Ok(today),
         "yesterday" => Ok(today - Duration::days(1)),
-        "week"      => Ok(today - Duration::days(today.weekday().num_days_from_monday() as i64)),
-        "month"     => Ok(today.with_day(1).expect("day 1 always valid")),
-        s => NaiveDate::parse_from_str(s, "%Y-%m-%d")
-            .with_context(|| format!(
-                "Invalid date \"{s}\", expected YYYY-MM-DD or: today, yesterday, week, month"
-            )),
+        "week" => Ok(today - Duration::days(today.weekday().num_days_from_monday() as i64)),
+        "month" => Ok(today.with_day(1).expect("day 1 always valid")),
+        s => NaiveDate::parse_from_str(s, "%Y-%m-%d").with_context(|| {
+            format!("Invalid date \"{s}\", expected YYYY-MM-DD or: today, yesterday, week, month")
+        }),
     }
 }
 
@@ -77,13 +76,17 @@ pub(crate) fn check_future(dt: DateTime<Utc>, config: &Config) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use chrono::Duration;
     use crate::config::{BehaviorConfig, StorageConfig, StorageProvider};
+    use chrono::Duration;
 
     fn cfg(allow_future: bool) -> Config {
         Config {
-            storage: StorageConfig { provider: StorageProvider::Json },
-            behavior: BehaviorConfig { allow_future_times: allow_future },
+            storage: StorageConfig {
+                provider: StorageProvider::Json,
+            },
+            behavior: BehaviorConfig {
+                allow_future_times: allow_future,
+            },
         }
     }
 

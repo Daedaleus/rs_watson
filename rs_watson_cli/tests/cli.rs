@@ -37,7 +37,9 @@ fn start_outputs_project_name() {
 fn start_with_tags_outputs_tags() {
     let dir = TempDir::new().unwrap();
     watson(&dir)
-        .args(["start", "-p", "backend", "-t", "api", "-t", "auth", "--at", "08:00"])
+        .args([
+            "start", "-p", "backend", "-t", "api", "-t", "auth", "--at", "08:00",
+        ])
         .assert()
         .success()
         .stdout(contains("api"));
@@ -46,7 +48,10 @@ fn start_with_tags_outputs_tags() {
 #[test]
 fn start_twice_fails_with_already_tracking() {
     let dir = TempDir::new().unwrap();
-    watson(&dir).args(["start", "-p", "backend", "--at", "08:00"]).assert().success();
+    watson(&dir)
+        .args(["start", "-p", "backend", "--at", "08:00"])
+        .assert()
+        .success();
     watson(&dir)
         .args(["start", "-p", "frontend", "--at", "08:30"])
         .assert()
@@ -57,7 +62,10 @@ fn start_twice_fails_with_already_tracking() {
 #[test]
 fn stop_after_start_outputs_stopped() {
     let dir = TempDir::new().unwrap();
-    watson(&dir).args(["start", "-p", "backend", "--at", "08:00"]).assert().success();
+    watson(&dir)
+        .args(["start", "-p", "backend", "--at", "08:00"])
+        .assert()
+        .success();
     watson(&dir)
         .args(["stop", "--at", "09:00"])
         .assert()
@@ -81,7 +89,10 @@ fn stop_when_idle_fails() {
 #[test]
 fn cancel_after_start_clears_tracking() {
     let dir = TempDir::new().unwrap();
-    watson(&dir).args(["start", "-p", "backend", "--at", "08:00"]).assert().success();
+    watson(&dir)
+        .args(["start", "-p", "backend", "--at", "08:00"])
+        .assert()
+        .success();
     watson(&dir)
         .args(["cancel"])
         .assert()
@@ -99,7 +110,11 @@ fn cancel_after_start_clears_tracking() {
 #[test]
 fn cancel_when_idle_fails() {
     let dir = TempDir::new().unwrap();
-    watson(&dir).args(["cancel"]).assert().failure().stderr(contains("Not currently tracking"));
+    watson(&dir)
+        .args(["cancel"])
+        .assert()
+        .failure()
+        .stderr(contains("Not currently tracking"));
 }
 
 // --- add ---
@@ -108,7 +123,9 @@ fn cancel_when_idle_fails() {
 fn add_creates_frame() {
     let dir = TempDir::new().unwrap();
     watson(&dir)
-        .args(["add", "-p", "meeting", "-t", "planning", "--from", "08:00", "--to", "09:30"])
+        .args([
+            "add", "-p", "meeting", "-t", "planning", "--from", "08:00", "--to", "09:30",
+        ])
         .assert()
         .success()
         .stdout(contains("Added"))
@@ -154,9 +171,18 @@ fn log_when_empty_says_no_frames() {
 #[test]
 fn projects_lists_unique_project_names() {
     let dir = TempDir::new().unwrap();
-    watson(&dir).args(["add", "-p", "backend",  "--from", "08:00", "--to", "09:00"]).assert().success();
-    watson(&dir).args(["add", "-p", "frontend", "--from", "09:00", "--to", "10:00"]).assert().success();
-    watson(&dir).args(["add", "-p", "backend",  "--from", "10:00", "--to", "11:00"]).assert().success();
+    watson(&dir)
+        .args(["add", "-p", "backend", "--from", "08:00", "--to", "09:00"])
+        .assert()
+        .success();
+    watson(&dir)
+        .args(["add", "-p", "frontend", "--from", "09:00", "--to", "10:00"])
+        .assert()
+        .success();
+    watson(&dir)
+        .args(["add", "-p", "backend", "--from", "10:00", "--to", "11:00"])
+        .assert()
+        .success();
     watson(&dir)
         .args(["projects"])
         .assert()
@@ -168,7 +194,10 @@ fn projects_lists_unique_project_names() {
 #[test]
 fn report_shows_project_totals() {
     let dir = TempDir::new().unwrap();
-    watson(&dir).args(["add", "-p", "backend", "--from", "08:00", "--to", "10:00"]).assert().success();
+    watson(&dir)
+        .args(["add", "-p", "backend", "--from", "08:00", "--to", "10:00"])
+        .assert()
+        .success();
     watson(&dir)
         .args(["report"])
         .assert()
@@ -182,8 +211,14 @@ fn report_shows_project_totals() {
 #[test]
 fn log_from_filter_excludes_older_frames() {
     let dir = TempDir::new().unwrap();
-    watson(&dir).args(["add", "-p", "old", "--from", "08:00", "--to", "09:00"]).assert().success();
-    watson(&dir).args(["add", "-p", "new", "--from", "10:00", "--to", "11:00"]).assert().success();
+    watson(&dir)
+        .args(["add", "-p", "old", "--from", "08:00", "--to", "09:00"])
+        .assert()
+        .success();
+    watson(&dir)
+        .args(["add", "-p", "new", "--from", "10:00", "--to", "11:00"])
+        .assert()
+        .success();
     // --from today should include both (same day), just verify it runs
     watson(&dir)
         .args(["log", "--from", "today"])
@@ -196,7 +231,10 @@ fn log_from_filter_excludes_older_frames() {
 #[test]
 fn log_with_future_from_shows_no_frames() {
     let dir = TempDir::new().unwrap();
-    watson(&dir).args(["add", "-p", "backend", "--from", "08:00", "--to", "09:00"]).assert().success();
+    watson(&dir)
+        .args(["add", "-p", "backend", "--from", "08:00", "--to", "09:00"])
+        .assert()
+        .success();
     watson(&dir)
         .args(["log", "--from", "2099-01-01"])
         .assert()
@@ -207,7 +245,10 @@ fn log_with_future_from_shows_no_frames() {
 #[test]
 fn report_with_date_range_filters_frames() {
     let dir = TempDir::new().unwrap();
-    watson(&dir).args(["add", "-p", "backend", "--from", "08:00", "--to", "10:00"]).assert().success();
+    watson(&dir)
+        .args(["add", "-p", "backend", "--from", "08:00", "--to", "10:00"])
+        .assert()
+        .success();
     watson(&dir)
         .args(["report", "--from", "today", "--to", "today"])
         .assert()
@@ -220,7 +261,10 @@ fn report_with_date_range_filters_frames() {
 #[test]
 fn rename_updates_project_name() {
     let dir = TempDir::new().unwrap();
-    watson(&dir).args(["add", "-p", "old-name", "--from", "08:00", "--to", "09:00"]).assert().success();
+    watson(&dir)
+        .args(["add", "-p", "old-name", "--from", "08:00", "--to", "09:00"])
+        .assert()
+        .success();
     watson(&dir)
         .args(["rename", "old-name", "new-name"])
         .assert()

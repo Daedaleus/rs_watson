@@ -30,12 +30,12 @@ impl SqliteStorage {
         conn.pragma_update(None, "journal_mode", "WAL")?;
         conn.pragma_update(None, "foreign_keys", true)?;
 
-        let migrations = Migrations::new(vec![
-            M::up(include_str!("migrations/001_initial.sql")),
-        ]);
+        let migrations = Migrations::new(vec![M::up(include_str!("migrations/001_initial.sql"))]);
         migrations.to_latest(&mut conn)?;
 
-        Ok(Self { conn: Mutex::new(conn) })
+        Ok(Self {
+            conn: Mutex::new(conn),
+        })
     }
 }
 
@@ -46,8 +46,7 @@ fn parse_dt(s: &str) -> Result<DateTime<Utc>, SqliteStorageError> {
 }
 
 fn parse_uuid(s: &str) -> Result<Uuid, SqliteStorageError> {
-    Uuid::parse_str(s)
-        .map_err(|e| SqliteStorageError::Parse(format!("invalid UUID \"{s}\": {e}")))
+    Uuid::parse_str(s).map_err(|e| SqliteStorageError::Parse(format!("invalid UUID \"{s}\": {e}")))
 }
 
 impl Storage for SqliteStorage {
@@ -57,9 +56,8 @@ impl Storage for SqliteStorage {
         let conn = self.conn.lock().unwrap();
 
         // Load frames ordered by start time
-        let mut frame_stmt = conn.prepare(
-            "SELECT id, project, start, end FROM frames ORDER BY start",
-        )?;
+        let mut frame_stmt =
+            conn.prepare("SELECT id, project, start, end FROM frames ORDER BY start")?;
         let frame_rows: Vec<(String, String, String, String)> = frame_stmt
             .query_map([], |row| {
                 Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?))
@@ -67,9 +65,8 @@ impl Storage for SqliteStorage {
             .collect::<Result<_, _>>()?;
 
         // Load all tags grouped by frame_id
-        let mut tag_stmt = conn.prepare(
-            "SELECT frame_id, tag FROM frame_tags ORDER BY frame_id, position",
-        )?;
+        let mut tag_stmt =
+            conn.prepare("SELECT frame_id, tag FROM frame_tags ORDER BY frame_id, position")?;
         let mut tags_by_frame: HashMap<String, Vec<String>> = HashMap::new();
         for row in tag_stmt.query_map([], |row| {
             Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
@@ -133,9 +130,8 @@ impl Storage for SqliteStorage {
             Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
             Err(e) => Err(SqliteStorageError::Rusqlite(e)),
             Ok((project, start)) => {
-                let mut tag_stmt = conn.prepare(
-                    "SELECT tag FROM active_frame_tags ORDER BY position",
-                )?;
+                let mut tag_stmt =
+                    conn.prepare("SELECT tag FROM active_frame_tags ORDER BY position")?;
                 let tags: Vec<String> = tag_stmt
                     .query_map([], |row| row.get(0))?
                     .collect::<Result<_, _>>()?;
@@ -217,7 +213,7 @@ mod tests {
         assert_eq!(loaded[0].project, "backend");
         assert_eq!(loaded[0].tags, vec!["api", "auth"]);
         assert_eq!(loaded[0].start, t(9));
-        assert_eq!(loaded[0].end,   t(10));
+        assert_eq!(loaded[0].end, t(10));
     }
 
     #[test]
@@ -226,7 +222,10 @@ mod tests {
         let mut f = sample_frame();
         f.tags = vec!["z-tag".into(), "a-tag".into(), "m-tag".into()];
         s.save_frames(&[f]).unwrap();
-        assert_eq!(s.load_frames().unwrap()[0].tags, vec!["z-tag", "a-tag", "m-tag"]);
+        assert_eq!(
+            s.load_frames().unwrap()[0].tags,
+            vec!["z-tag", "a-tag", "m-tag"]
+        );
     }
 
     #[test]
@@ -239,8 +238,12 @@ mod tests {
         let s = storage();
         let mut f1 = sample_frame();
         let mut f2 = sample_frame();
-        f1.project = "second".into(); f1.start = t(10); f1.end = t(11);
-        f2.project = "first".into();  f2.start = t(8);  f2.end = t(9);
+        f1.project = "second".into();
+        f1.start = t(10);
+        f1.end = t(11);
+        f2.project = "first".into();
+        f2.start = t(8);
+        f2.end = t(9);
         s.save_frames(&[f1, f2]).unwrap();
         let frames = s.load_frames().unwrap();
         assert_eq!(frames[0].project, "first");

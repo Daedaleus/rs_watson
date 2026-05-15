@@ -56,7 +56,6 @@ impl Config {
         let content = std::fs::read_to_string(&path)
             .with_context(|| format!("Could not read config file: {}", path.display()))?;
 
-        toml::from_str(&content)
-            .with_context(|| format!("Invalid config file: {}", path.display()))
+        toml::from_str(&content).with_context(|| format!("Invalid config file: {}", path.display()))
     }
 }
