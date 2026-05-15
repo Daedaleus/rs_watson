@@ -5,7 +5,7 @@ use chrono::{
 use dialoguer::{Input, theme::ColorfulTheme};
 use owo_colors::OwoColorize;
 
-use crate::config::{Config, WeekStart};
+use rs_watson::config::{Config, WeekStart};
 
 /// Parses a date string into a `NaiveDate` in local time.
 /// Accepts `YYYY-MM-DD` or shortcuts: `today`, `yesterday`, `week`, `month`.
@@ -141,8 +141,8 @@ pub(crate) fn check_future(dt: DateTime<Utc>, config: &Config) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config::{BehaviorConfig, LogConfig, StorageConfig, WeekStart};
     use chrono::Duration;
+    use rs_watson::config::{BehaviorConfig, LogConfig, StorageConfig, WeekStart};
 
     fn cfg(allow_future: bool) -> Config {
         Config {

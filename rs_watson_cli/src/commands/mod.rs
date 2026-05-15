@@ -9,8 +9,8 @@ use clap::Subcommand;
 use rs_watson::Watson;
 use rs_watson_storage::Storage;
 
-use crate::config::{Config, WeekStart};
 use crate::time_utils::parse_date;
+use rs_watson::config::{Config, WeekStart};
 
 pub(crate) use init::cmd_init;
 

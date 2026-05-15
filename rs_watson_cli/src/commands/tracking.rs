@@ -4,10 +4,10 @@ use owo_colors::OwoColorize;
 use rs_watson::Watson;
 use rs_watson_storage::Storage;
 
-use crate::config::Config;
 use crate::format::{fmt_duration, fmt_tags, fmt_time, print_frame_summary};
 use crate::time_utils::{check_future, parse_at};
 use rs_watson::StartResult;
+use rs_watson::config::Config;
 
 use super::w_err;
 

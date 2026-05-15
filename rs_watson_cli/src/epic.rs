@@ -1,21 +1,9 @@
 use chrono::Duration;
 use owo_colors::OwoColorize;
-use rs_watson::{Frame, Report};
+use rs_watson::config::EpicConfig;
+use rs_watson::{Frame, Report, resolve_epic};
 
-use crate::config::EpicConfig;
-use crate::format::fmt_duration;
-
-/// Returns the best-matching epic name for a frame.
-/// "Best" means the epic with the most matching tags (most specific rule).
-/// All epic tags must be present in the frame; epic project must match exactly.
-pub(crate) fn resolve_epic<'a>(frame: &Frame, epics: &'a [EpicConfig]) -> Option<&'a str> {
-    epics
-        .iter()
-        .filter(|e| e.project == frame.project)
-        .filter(|e| e.tags.iter().all(|t| frame.tags.contains(t)))
-        .max_by_key(|e| e.tags.len())
-        .map(|e| e.name.as_str())
-}
+use crate::format::{fmt_duration, print_project_breakdown};
 
 /// Prints an aggregated report grouped by epic, then project, then tag.
 /// Frames with no matching epic are shown under "Unassigned".
@@ -41,7 +29,7 @@ pub(crate) fn print_epic_report(frames: &[Frame], epics: &[EpicConfig], show_tot
         .fold(Duration::zero(), |acc, f| acc + (f.end - f.start));
 
     for (name, epic_frames) in buckets.iter().filter(|(_, f)| !f.is_empty()) {
-        let owned: Vec<Frame> = epic_frames.iter().map(|f| (*f).clone()).collect();
+        let owned: Vec<Frame> = epic_frames.iter().copied().cloned().collect();
         let report = Report::from_frames(&owned);
         println!(
             "{}  {}",
@@ -54,7 +42,7 @@ pub(crate) fn print_epic_report(frames: &[Frame], epics: &[EpicConfig], show_tot
     }
 
     if !unassigned.is_empty() {
-        let owned: Vec<Frame> = unassigned.iter().map(|f| (*f).clone()).collect();
+        let owned: Vec<Frame> = unassigned.iter().copied().cloned().collect();
         let report = Report::from_frames(&owned);
         println!(
             "{}  {}",
@@ -72,23 +60,6 @@ pub(crate) fn print_epic_report(frames: &[Frame], epics: &[EpicConfig], show_tot
             "Total".bold().white(),
             fmt_duration(grand_total).magenta().bold(),
         );
-    }
-}
-
-fn print_project_breakdown(report: &Report) {
-    for project in &report.projects {
-        println!(
-            "  {}  {}",
-            format!("{:<20}", project.name).yellow().bold(),
-            fmt_duration(project.total).magenta().bold(),
-        );
-        for tag in &project.tags {
-            println!(
-                "    {}  {}",
-                format!("{:<18}", tag.name).cyan(),
-                fmt_duration(tag.total).magenta(),
-            );
-        }
     }
 }
 

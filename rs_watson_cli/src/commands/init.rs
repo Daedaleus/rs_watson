@@ -2,7 +2,9 @@ use anyhow::{Context, Result};
 use dialoguer::{Confirm, Input, Select, theme::ColorfulTheme};
 use owo_colors::OwoColorize;
 
-use crate::config::{BehaviorConfig, Config, LogConfig, StorageConfig, StorageProvider, WeekStart};
+use rs_watson::config::{
+    BehaviorConfig, Config, LogConfig, StorageConfig, StorageProvider, WeekStart,
+};
 
 #[allow(clippy::vec_init_then_push)] // cfg-gated pushes require this pattern
 pub(crate) fn cmd_init() -> Result<()> {

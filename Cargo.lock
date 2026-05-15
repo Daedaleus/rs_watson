@@ -713,8 +713,11 @@ name = "rs_watson"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "dirs",
  "rs_watson_storage",
+ "serde",
  "thiserror",
+ "toml",
  "uuid",
 ]
 
@@ -734,7 +737,6 @@ dependencies = [
  "rs_watson",
  "rs_watson_export",
  "rs_watson_storage",
- "serde",
  "serde_json",
  "tempfile",
  "toml",

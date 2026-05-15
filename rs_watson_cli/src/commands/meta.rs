@@ -3,7 +3,7 @@ use owo_colors::OwoColorize;
 use rs_watson::Watson;
 use rs_watson_storage::Storage;
 
-use crate::config::Config;
+use rs_watson::config::Config;
 
 use super::w_err;
 

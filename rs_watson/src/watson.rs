@@ -166,6 +166,9 @@ impl<S: Storage> Watson<S> {
 
     pub fn stop(&self, at: DateTime<Utc>) -> Result<Frame, WatsonError<S::Error>> {
         let active = self.load_active()?.ok_or(WatsonError::NotTracking)?;
+        if at <= active.start {
+            return Err(WatsonError::InvalidTimeRange);
+        }
         let frame = ActiveFrame::from(active).stop(at);
         self.modify_frames(|records| {
             if let Some(conflict) = find_overlap(frame.start, Some(frame.end), records, None) {
@@ -213,6 +216,9 @@ impl<S: Storage> Watson<S> {
         start: DateTime<Utc>,
         end: DateTime<Utc>,
     ) -> Result<Frame, WatsonError<S::Error>> {
+        if end <= start {
+            return Err(WatsonError::InvalidTimeRange);
+        }
         let frame = Frame {
             id,
             project: project.into(),
@@ -384,6 +390,26 @@ mod tests {
         ));
     }
 
+    #[test]
+    fn stop_rejects_at_before_start() {
+        let w = w();
+        w.start("backend", vec![], t(10, 0)).unwrap();
+        assert!(matches!(
+            w.stop(t(9, 0)).unwrap_err(),
+            WatsonError::InvalidTimeRange
+        ));
+    }
+
+    #[test]
+    fn stop_rejects_at_equal_to_start() {
+        let w = w();
+        w.start("backend", vec![], t(10, 0)).unwrap();
+        assert!(matches!(
+            w.stop(t(10, 0)).unwrap_err(),
+            WatsonError::InvalidTimeRange
+        ));
+    }
+
     // --- cancel ---
 
     #[test]
@@ -460,6 +486,28 @@ mod tests {
             w.edit(Uuid::new_v4(), "x", vec![], t(9, 0), t(10, 0))
                 .unwrap_err(),
             WatsonError::FrameNotFound
+        ));
+    }
+
+    #[test]
+    fn edit_rejects_end_before_start() {
+        let w = w();
+        let frame = w.add("backend", vec![], t(9, 0), t(10, 0)).unwrap();
+        assert!(matches!(
+            w.edit(frame.id, "backend", vec![], t(10, 0), t(9, 0))
+                .unwrap_err(),
+            WatsonError::InvalidTimeRange
+        ));
+    }
+
+    #[test]
+    fn edit_rejects_equal_start_and_end() {
+        let w = w();
+        let frame = w.add("backend", vec![], t(9, 0), t(10, 0)).unwrap();
+        assert!(matches!(
+            w.edit(frame.id, "backend", vec![], t(9, 0), t(9, 0))
+                .unwrap_err(),
+            WatsonError::InvalidTimeRange
         ));
     }
 

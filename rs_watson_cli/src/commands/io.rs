@@ -7,8 +7,8 @@ use owo_colors::OwoColorize;
 use rs_watson::Watson;
 use rs_watson_storage::Storage;
 
-use crate::config::Config;
 use crate::format::{fmt_tags, fmt_time};
+use rs_watson::config::Config;
 
 use super::{apply_date_filter, w_err};
 

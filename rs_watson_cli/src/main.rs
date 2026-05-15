@@ -1,5 +1,4 @@
 mod commands;
-mod config;
 mod epic;
 mod format;
 mod time_utils;
@@ -11,8 +10,9 @@ use clap::{CommandFactory, Parser};
 use owo_colors::OwoColorize;
 use rs_watson::Watson;
 
+use rs_watson::config::{Config, StorageProvider};
+
 use crate::commands::{Commands, cmd_init, dispatch};
-use crate::config::{Config, StorageProvider};
 
 #[cfg(feature = "storage-json")]
 use rs_watson_storage::json::JsonStorage;

@@ -5,13 +5,13 @@ use owo_colors::OwoColorize;
 use rs_watson::Watson;
 use rs_watson_storage::Storage;
 
-use crate::config::Config;
 use crate::epic::print_epic_report;
 use crate::format::{
     fmt_duration, fmt_tags, fmt_time, print_frame_summary, print_frames_grouped,
     print_report_grouped,
 };
 use crate::time_utils::{check_future, parse_at, prompt_time};
+use rs_watson::config::Config;
 
 use super::{apply_date_filter, w_err};
 

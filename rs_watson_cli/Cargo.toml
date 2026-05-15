@@ -10,9 +10,9 @@ path = "src/main.rs"
 [features]
 default = ["storage-sqlite"]
 # Enable the JSON flat-file storage backend
-storage-json = ["rs_watson_storage/json"]
+storage-json = ["rs_watson/storage-json"]
 # Enable the SQLite storage backend (requires a C compiler for the bundled library)
-storage-sqlite = ["rs_watson_storage/sqlite"]
+storage-sqlite = ["rs_watson/storage-sqlite"]
 
 [dependencies]
 anyhow = "1.0.102"
@@ -25,7 +25,6 @@ owo-colors = "4.3.0"
 rs_watson = { version = "0.1.0", path = "../rs_watson" }
 rs_watson_export = { version = "0.1.0", path = "../rs_watson_export" }
 rs_watson_storage = { version = "0.1.0", path = "../rs_watson_storage", default-features = false }
-serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"
 toml = "1.1.2"
 
