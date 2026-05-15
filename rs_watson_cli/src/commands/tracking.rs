@@ -7,6 +7,7 @@ use rs_watson_storage::Storage;
 use crate::config::Config;
 use crate::format::{fmt_duration, fmt_tags, fmt_time};
 use crate::time_utils::{check_future, parse_at};
+use rs_watson::StartResult;
 
 use super::w_err;
 
@@ -22,13 +23,36 @@ pub(super) fn cmd_start<S: Storage<Error: std::error::Error + Send + Sync + 'sta
         .transpose()?
         .unwrap_or_else(Utc::now);
     check_future(time, config)?;
-    let frame = watson.start(&project, tags, time).map_err(w_err)?;
+    let StartResult { replaced, active } = watson
+        .start_or_replace(&project, tags, time)
+        .map_err(w_err)?;
+
+    if let Some(stopped) = replaced {
+        println!(
+            "{} {}{}",
+            "Stopped ".red().bold(),
+            stopped.project.yellow().bold(),
+            fmt_tags(&stopped.tags),
+        );
+        println!(
+            "  {}  {}  {}",
+            fmt_time(stopped.start).bright_white(),
+            "→".white(),
+            fmt_time(stopped.end).bright_white(),
+        );
+        println!(
+            "  {}",
+            fmt_duration(stopped.end - stopped.start).magenta().bold()
+        );
+        println!();
+    }
+
     println!(
         "{} {}{}  {}",
         "Starting".green().bold(),
-        frame.project.yellow().bold(),
-        fmt_tags(&frame.tags),
-        fmt_time(frame.start).bright_black(),
+        active.project.yellow().bold(),
+        fmt_tags(&active.tags),
+        fmt_time(active.start).bright_black(),
     );
     Ok(())
 }

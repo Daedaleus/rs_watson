@@ -5,4 +5,4 @@ mod watson;
 
 pub use frame::{ActiveFrame, Frame};
 pub use report::Report;
-pub use watson::{Watson, WatsonError};
+pub use watson::{StartResult, Watson, WatsonError};

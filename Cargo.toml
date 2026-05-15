@@ -2,6 +2,7 @@
 members = [
     "rs_watson",
     "rs_watson_storage",
-    "rs_watson_cli", "rs_watson_export",
+    "rs_watson_cli",
+    "rs_watson_export",
 ]
 resolver = "2"

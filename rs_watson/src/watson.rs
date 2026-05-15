@@ -44,6 +44,15 @@ fn find_overlap(
     })
 }
 
+/// Result of `Watson::start_or_replace`.
+#[derive(Debug)]
+pub struct StartResult {
+    /// Frame that was automatically stopped to make room, if any.
+    pub replaced: Option<Frame>,
+    /// The newly started active frame.
+    pub active: ActiveFrame,
+}
+
 pub struct Watson<S: Storage> {
     storage: S,
 }
@@ -256,6 +265,66 @@ impl<S: Storage> Watson<S> {
         Ok(count)
     }
 
+    /// Starts tracking. If another frame is already active it is automatically
+    /// stopped at `at` before the new frame begins. Returns what was stopped
+    /// (if anything) alongside the new active frame.
+    ///
+    /// Errors if:
+    /// - `at` is not after the current active frame's start (`InvalidTimeRange`)
+    /// - the auto-stopped frame overlaps existing completed frames (`OverlappingFrame`)
+    /// - the new start time falls inside an existing completed frame (`OverlappingFrame`)
+    pub fn start_or_replace(
+        &self,
+        project: impl Into<String>,
+        tags: Vec<String>,
+        at: DateTime<Utc>,
+    ) -> Result<StartResult, WatsonError<S::Error>> {
+        let existing_active = self.storage.load_active().map_err(WatsonError::Storage)?;
+        let mut records = self.storage.load_frames().map_err(WatsonError::Storage)?;
+
+        let replaced = if let Some(active_record) = existing_active {
+            let active = ActiveFrame::from(active_record);
+
+            if at <= active.start {
+                return Err(WatsonError::InvalidTimeRange);
+            }
+
+            let completed = active.stop(at);
+            if let Some(conflict) =
+                find_overlap(completed.start, Some(completed.end), &records, None)
+            {
+                return Err(WatsonError::OverlappingFrame(conflict.project.clone()));
+            }
+
+            records.push(FrameRecord::from(&completed));
+            Some(completed)
+        } else {
+            None
+        };
+
+        // Check new start doesn't fall inside any existing (or just-completed) frame.
+        if let Some(conflict) = find_overlap(at, None, &records, None) {
+            return Err(WatsonError::OverlappingFrame(conflict.project.clone()));
+        }
+
+        if replaced.is_some() {
+            self.storage
+                .save_frames(&records)
+                .map_err(WatsonError::Storage)?;
+        }
+
+        let new_active = ActiveFrame::new(project, tags, at);
+        let record = ActiveFrameRecord::from(&new_active);
+        self.storage
+            .save_active(Some(&record))
+            .map_err(WatsonError::Storage)?;
+
+        Ok(StartResult {
+            replaced,
+            active: new_active,
+        })
+    }
+
     pub fn start(
         &self,
         project: impl Into<String>,
@@ -453,6 +522,70 @@ mod tests {
                 .unwrap_err(),
             WatsonError::FrameNotFound
         ));
+    }
+
+    // --- start_or_replace ---
+
+    #[test]
+    fn start_or_replace_with_no_active_behaves_like_start() {
+        let w = w();
+        let result = w.start_or_replace("backend", vec![], t(9, 0)).unwrap();
+        assert!(result.replaced.is_none());
+        assert_eq!(result.active.project, "backend");
+        assert!(w.status().unwrap().is_some());
+    }
+
+    #[test]
+    fn start_or_replace_stops_active_and_starts_new() {
+        let w = w();
+        w.start("old", vec![], t(9, 0)).unwrap();
+        let result = w.start_or_replace("new", vec![], t(10, 0)).unwrap();
+
+        let stopped = result.replaced.unwrap();
+        assert_eq!(stopped.project, "old");
+        assert_eq!(stopped.start, t(9, 0));
+        assert_eq!(stopped.end, t(10, 0));
+
+        assert_eq!(result.active.project, "new");
+        assert_eq!(result.active.start, t(10, 0));
+
+        // old frame saved, new one active
+        assert_eq!(w.log().unwrap().len(), 1);
+        assert_eq!(w.status().unwrap().unwrap().project, "new");
+    }
+
+    #[test]
+    fn start_or_replace_rejects_at_before_active_start() {
+        let w = w();
+        w.start("old", vec![], t(10, 0)).unwrap();
+        assert!(matches!(
+            w.start_or_replace("new", vec![], t(9, 0)).unwrap_err(),
+            WatsonError::InvalidTimeRange
+        ));
+    }
+
+    #[test]
+    fn start_or_replace_rejects_overlap_with_existing_frame() {
+        let w = w();
+        // completed frame [10:00, 11:00]
+        w.add("existing", vec![], t(10, 0), t(11, 0)).unwrap();
+        // active since 09:00 — auto-stop at 10:30 would overlap [10:00, 11:00]
+        w.start("active", vec![], t(9, 0)).unwrap();
+        assert!(matches!(
+            w.start_or_replace("new", vec![], t(10, 30)).unwrap_err(),
+            WatsonError::OverlappingFrame(_)
+        ));
+    }
+
+    #[test]
+    fn start_or_replace_with_at_equal_to_existing_end_is_adjacent_and_ok() {
+        let w = w();
+        w.add("first", vec![], t(8, 0), t(9, 0)).unwrap();
+        w.start("second", vec![], t(9, 0)).unwrap();
+        // stop second at 10:00 — adjacent to first, no overlap
+        let result = w.start_or_replace("third", vec![], t(10, 0)).unwrap();
+        assert!(result.replaced.is_some());
+        assert_eq!(result.active.project, "third");
     }
 
     // --- overlap ---

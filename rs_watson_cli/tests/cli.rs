@@ -54,7 +54,7 @@ fn start_with_tags_outputs_tags() {
 }
 
 #[test]
-fn start_twice_fails_with_already_tracking() {
+fn start_twice_auto_stops_first_and_starts_second() {
     let dir = TempDir::new().unwrap();
     watson(&dir)
         .args(["start", "-p", "backend", "--at", "08:00"])
@@ -63,8 +63,11 @@ fn start_twice_fails_with_already_tracking() {
     watson(&dir)
         .args(["start", "-p", "frontend", "--at", "08:30"])
         .assert()
-        .failure()
-        .stderr(contains("Already tracking"));
+        .success()
+        .stdout(contains("Stopped"))
+        .stdout(contains("backend"))
+        .stdout(contains("Starting"))
+        .stdout(contains("frontend"));
 }
 
 #[test]
@@ -295,6 +298,51 @@ fn rename_unknown_project_fails() {
         .assert()
         .failure()
         .stderr(contains("not found"));
+}
+
+// --- auto-stop on start ---
+
+#[test]
+fn start_auto_stops_active_and_starts_new() {
+    let dir = TempDir::new().unwrap();
+    watson(&dir)
+        .args(["start", "-p", "old", "--at", "08:00"])
+        .assert()
+        .success();
+    watson(&dir)
+        .args(["start", "-p", "new", "--at", "09:00"])
+        .assert()
+        .success()
+        .stdout(contains("Stopped"))
+        .stdout(contains("old"))
+        .stdout(contains("Starting"))
+        .stdout(contains("new"));
+    // old must be in log
+    watson(&dir)
+        .args(["log"])
+        .assert()
+        .success()
+        .stdout(contains("old"));
+    // new must be active
+    watson(&dir)
+        .args(["status"])
+        .assert()
+        .success()
+        .stdout(contains("new"));
+}
+
+#[test]
+fn start_auto_stop_rejects_at_before_active_start() {
+    let dir = TempDir::new().unwrap();
+    watson(&dir)
+        .args(["start", "-p", "old", "--at", "10:00"])
+        .assert()
+        .success();
+    watson(&dir)
+        .args(["start", "-p", "new", "--at", "09:00"])
+        .assert()
+        .failure()
+        .stderr(contains("End time must be after start time"));
 }
 
 // --- overlap detection ---
