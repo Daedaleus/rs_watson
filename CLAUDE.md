@@ -13,8 +13,11 @@
    ```
 2. **Make changes** and commit to that branch using the commit convention below
 3. **Run `cargo fmt`** before every commit — mandatory, no exceptions
-4. **Tell the user** the branch name so they can open a PR
-5. **Ask whether to push** — after completing the task, always ask: "Soll ich den Branch pushen?"
+4. **Merge to `main`** once the task is complete and all checks pass:
+   ```sh
+   git checkout main && git merge <branch> --ff-only && git branch -d <branch>
+   ```
+5. **Ask whether to push** — if a remote is configured, ask: "Soll ich den Branch pushen?" before merging
 
 - If I am already on a non-`main` branch that matches the task, I continue on it
 - Hotfixes on `main` are only allowed when explicitly instructed by the user
@@ -25,26 +28,40 @@
 
 **rs_watson** is a Rust reimplementation of [Watson](https://github.com/jazzband/Watson), a time-tracking CLI tool.
 
-The project is structured as a Cargo workspace with three crates:
+The project is structured as a Cargo workspace with five crates:
 
 | Crate | Type | Purpose |
 |---|---|---|
-| `rs_watson` | Library | Core time-tracking logic (reimplementation of Watson's business logic) |
-| `rs_watson_storage` | Library | Storage engine abstraction — initial backends: JSON and SQLite |
-| `rs_watson_cli` | Binary | CLI interface — mirrors the Watson CLI UX |
+| `rs_watson` | Library | Core logic, domain types, Config, EpicConfig, resolve_epic |
+| `rs_watson_storage` | Library | Storage trait + JSON and SQLite backends |
+| `rs_watson_export` | Library | Export trait + CSV exporter |
+| `rs_watson_cli` | Binary `watson` | CLI interface — mirrors the Watson CLI UX |
+| `rs_watson_ui` | Binary `rs_watson_ui` | Native desktop UI (egui/eframe) |
 
-- `rs_watson` depends on `rs_watson_storage` for persistence
-- `rs_watson_cli` depends on `rs_watson` for all logic
-- `rs_watson_storage` has no dependency on the other crates — it is a pure storage abstraction
+**Dependency graph:**
+```
+rs_watson_storage  (no deps on other workspace crates)
+       ↓
+rs_watson          (logic + Config + EpicConfig + resolve_epic)
+       ↓              ↓
+rs_watson_cli    rs_watson_ui    (both depend on rs_watson; CLI also on rs_watson_export)
+```
+
+- `rs_watson_storage` is a pure storage abstraction — no business logic
+- `rs_watson` owns all domain logic **and** application configuration (`Config`, `EpicConfig`, `WeekStart`, `StorageProvider`)
+- Neither `rs_watson_cli` nor `rs_watson_ui` contain business logic — only I/O, rendering, and argument parsing
+- Storage feature flags (`storage-json`, `storage-sqlite`) are defined in `rs_watson` and forwarded by CLI/UI
 
 ---
 
 # Architecture Principles
 
-- Strict separation of concerns: logic, storage, and CLI are independent crates
+- Strict separation of concerns: logic, storage, CLI, and UI are independent crates
 - Storage backends are interchangeable via a trait — no storage-specific code in the logic layer
-- No business logic in the CLI crate — only argument parsing and output formatting
-- Error handling via `thiserror` / `anyhow` — no `unwrap()` in production paths
+- No business logic in CLI or UI — only argument parsing, output formatting, and rendering
+- Configuration (`Config` and all sub-types) lives in `rs_watson`, not in CLI or UI, so both binaries share the same config format and loading logic without duplication
+- Error handling via `thiserror` for library crates, `anyhow` for binaries — no `unwrap()` in production paths
+- The UI (`rs_watson_ui`) uses egui/eframe and requires system libraries on Linux (libxkbcommon, libwayland, libx11, libegl, libfontconfig)
 
 ---
 
@@ -115,7 +132,7 @@ This project follows [Conventional Commits](https://www.conventionalcommits.org/
 
 ## Scope Examples
 
-`logic` · `storage` · `cli` · `json` · `sqlite` · `deps` · `workspace` · `ci`
+`logic` · `storage` · `cli` · `ui` · `export` · `config` · `json` · `sqlite` · `deps` · `workspace` · `ci`
 
 ## Examples
 
@@ -134,6 +151,39 @@ test(logic): 🧪 add tests for report aggregation
 - Imperative mood ("add", "fix", "remove" — not "added", "fixed", "removed")
 - English as standard
 - Body optional but encouraged for non-obvious changes
+
+---
+
+# CI / Release
+
+## CI (`.github/workflows/ci.yml`)
+
+Three jobs run on every push to `main` and every PR:
+
+| Job | Runs on | What it checks |
+|---|---|---|
+| `lint` | ubuntu-latest | `cargo fmt --check`, `cargo clippy -- -D warnings` (full workspace) |
+| `test` | ubuntu / macos / windows | `cargo build`, `cargo test` (full workspace) |
+| `test-features` | ubuntu-latest | `rs_watson_cli` built/tested with sqlite-only, json-only, and both backends |
+
+Linux runners install egui/eframe system dependencies before building.
+
+## Release (`.github/workflows/release.yml`)
+
+Triggered by a tag matching `v*.*.*`:
+
+```sh
+git tag v1.2.3 && git push origin v1.2.3
+```
+
+Builds `watson` (CLI) + `rs_watson_ui` in release mode on four targets and attaches them to a GitHub Release:
+
+| Target | Archive |
+|---|---|
+| Linux x86_64 | `rs-watson-vX.Y.Z-linux-x86_64.tar.gz` |
+| macOS ARM64 | `rs-watson-vX.Y.Z-macos-aarch64.tar.gz` |
+| macOS x86_64 | `rs-watson-vX.Y.Z-macos-x86_64.tar.gz` |
+| Windows x86_64 | `rs-watson-vX.Y.Z-windows-x86_64.zip` |
 
 ---
 
