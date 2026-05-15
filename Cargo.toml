@@ -1,0 +1,7 @@
+[workspace]
+members = [
+    "rs_watson",
+    "rs_watson_storage",
+    "rs_watson_cli",
+]
+resolver = "2"
