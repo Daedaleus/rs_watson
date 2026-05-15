@@ -6,7 +6,7 @@ mod time_utils;
 use std::process;
 
 use anyhow::{Context, Result};
-use clap::Parser;
+use clap::{CommandFactory, Parser};
 use owo_colors::OwoColorize;
 use rs_watson::Watson;
 use rs_watson_storage::json::JsonStorage;
@@ -34,6 +34,11 @@ fn run() -> Result<()> {
 
     if matches!(cli.command, Commands::Init) {
         return cmd_init();
+    }
+
+    if let Commands::Completions { shell } = cli.command {
+        clap_complete::generate(shell, &mut Cli::command(), "watson", &mut std::io::stdout());
+        return Ok(());
     }
 
     let config = Config::load()?;

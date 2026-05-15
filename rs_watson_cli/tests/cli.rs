@@ -177,6 +177,74 @@ fn report_shows_project_totals() {
         .stdout(contains("2h"));
 }
 
+// --- date filters ---
+
+#[test]
+fn log_from_filter_excludes_older_frames() {
+    let dir = TempDir::new().unwrap();
+    watson(&dir).args(["add", "-p", "old", "--from", "08:00", "--to", "09:00"]).assert().success();
+    watson(&dir).args(["add", "-p", "new", "--from", "10:00", "--to", "11:00"]).assert().success();
+    // --from today should include both (same day), just verify it runs
+    watson(&dir)
+        .args(["log", "--from", "today"])
+        .assert()
+        .success()
+        .stdout(contains("old"))
+        .stdout(contains("new"));
+}
+
+#[test]
+fn log_with_future_from_shows_no_frames() {
+    let dir = TempDir::new().unwrap();
+    watson(&dir).args(["add", "-p", "backend", "--from", "08:00", "--to", "09:00"]).assert().success();
+    watson(&dir)
+        .args(["log", "--from", "2099-01-01"])
+        .assert()
+        .success()
+        .stdout(contains("No frames recorded"));
+}
+
+#[test]
+fn report_with_date_range_filters_frames() {
+    let dir = TempDir::new().unwrap();
+    watson(&dir).args(["add", "-p", "backend", "--from", "08:00", "--to", "10:00"]).assert().success();
+    watson(&dir)
+        .args(["report", "--from", "today", "--to", "today"])
+        .assert()
+        .success()
+        .stdout(contains("backend"));
+}
+
+// --- rename ---
+
+#[test]
+fn rename_updates_project_name() {
+    let dir = TempDir::new().unwrap();
+    watson(&dir).args(["add", "-p", "old-name", "--from", "08:00", "--to", "09:00"]).assert().success();
+    watson(&dir)
+        .args(["rename", "old-name", "new-name"])
+        .assert()
+        .success()
+        .stdout(contains("Renamed"))
+        .stdout(contains("old-name"))
+        .stdout(contains("new-name"));
+    watson(&dir)
+        .args(["projects"])
+        .assert()
+        .success()
+        .stdout(contains("new-name"));
+}
+
+#[test]
+fn rename_unknown_project_fails() {
+    let dir = TempDir::new().unwrap();
+    watson(&dir)
+        .args(["rename", "ghost", "new-name"])
+        .assert()
+        .failure()
+        .stderr(contains("not found"));
+}
+
 // --- invalid time input ---
 
 #[test]

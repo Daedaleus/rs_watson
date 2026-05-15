@@ -87,6 +87,48 @@ mod tests {
         }
     }
 
+    // --- parse_date ---
+
+    #[test]
+    fn parse_date_accepts_iso_format() {
+        let d = parse_date("2026-05-15").unwrap();
+        assert_eq!(d, NaiveDate::from_ymd_opt(2026, 5, 15).unwrap());
+    }
+
+    #[test]
+    fn parse_date_today_equals_local_today() {
+        assert_eq!(parse_date("today").unwrap(), Local::now().date_naive());
+    }
+
+    #[test]
+    fn parse_date_yesterday_is_one_day_before_today() {
+        let expected = Local::now().date_naive() - Duration::days(1);
+        assert_eq!(parse_date("yesterday").unwrap(), expected);
+    }
+
+    #[test]
+    fn parse_date_week_is_start_of_current_week() {
+        let today = Local::now().date_naive();
+        let expected = today - Duration::days(today.weekday().num_days_from_monday() as i64);
+        assert_eq!(parse_date("week").unwrap(), expected);
+    }
+
+    #[test]
+    fn parse_date_month_is_first_of_current_month() {
+        let today = Local::now().date_naive();
+        let expected = today.with_day(1).unwrap();
+        assert_eq!(parse_date("month").unwrap(), expected);
+    }
+
+    #[test]
+    fn parse_date_rejects_invalid() {
+        assert!(parse_date("invalid").is_err());
+        assert!(parse_date("2026/05/15").is_err());
+        assert!(parse_date("").is_err());
+    }
+
+    // --- parse_at ---
+
     #[test]
     fn parse_at_rejects_invalid_format() {
         assert!(parse_at("25:00").is_err());

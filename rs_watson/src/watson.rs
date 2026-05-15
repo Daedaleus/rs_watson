@@ -13,6 +13,8 @@ pub enum WatsonError<E: std::error::Error + 'static> {
     NotTracking,
     #[error("Frame not found")]
     FrameNotFound,
+    #[error("Project \"{0}\" not found")]
+    ProjectNotFound(String),
     #[error("End time must be after start time")]
     InvalidTimeRange,
     #[error("Storage error: {0}")]
@@ -26,6 +28,43 @@ pub struct Watson<S: Storage> {
 impl<S: Storage> Watson<S> {
     pub fn new(storage: S) -> Self {
         Self { storage }
+    }
+
+    /// Renames a project across all completed frames and the active frame (if running).
+    /// Returns the total number of items updated. Errors if the project is not found anywhere.
+    pub fn rename(
+        &self,
+        from: &str,
+        to: impl Into<String>,
+    ) -> Result<usize, WatsonError<S::Error>> {
+        let to = to.into();
+        let mut records = self.storage.load_frames().map_err(WatsonError::Storage)?;
+        let mut count = 0usize;
+        for record in &mut records {
+            if record.project == from {
+                record.project = to.clone();
+                count += 1;
+            }
+        }
+
+        let active_updated =
+            if let Some(mut active) = self.storage.load_active().map_err(WatsonError::Storage)? {
+                if active.project == from {
+                    active.project = to.clone();
+                    self.storage.save_active(Some(&active)).map_err(WatsonError::Storage)?;
+                    true
+                } else {
+                    false
+                }
+            } else {
+                false
+            };
+
+        if count == 0 && !active_updated {
+            return Err(WatsonError::ProjectNotFound(from.to_string()));
+        }
+        self.storage.save_frames(&records).map_err(WatsonError::Storage)?;
+        Ok(count + usize::from(active_updated))
     }
 
     pub fn remove(&self, id: Uuid) -> Result<Frame, WatsonError<S::Error>> {
@@ -314,6 +353,66 @@ mod tests {
         assert!(matches!(
             w.edit(Uuid::new_v4(), "x", vec![], t(9, 0), t(10, 0)).unwrap_err(),
             WatsonError::FrameNotFound
+        ));
+    }
+
+    // --- remove ---
+
+    #[test]
+    fn remove_deletes_frame() {
+        let w = w();
+        let frame = w.add("backend", vec![], t(9, 0), t(10, 0)).unwrap();
+        w.remove(frame.id).unwrap();
+        assert!(w.log().unwrap().is_empty());
+    }
+
+    #[test]
+    fn remove_returns_deleted_frame() {
+        let w = w();
+        let frame = w.add("backend", vec!["api".into()], t(9, 0), t(10, 0)).unwrap();
+        let removed = w.remove(frame.id).unwrap();
+        assert_eq!(removed.project, "backend");
+        assert_eq!(removed.tags, vec!["api"]);
+    }
+
+    #[test]
+    fn remove_unknown_id_returns_error() {
+        let w = w();
+        assert!(matches!(
+            w.remove(Uuid::new_v4()).unwrap_err(),
+            WatsonError::FrameNotFound
+        ));
+    }
+
+    // --- rename ---
+
+    #[test]
+    fn rename_updates_all_matching_frames() {
+        let w = w();
+        w.add("old", vec![], t(9, 0), t(10, 0)).unwrap();
+        w.add("old", vec![], t(10, 0), t(11, 0)).unwrap();
+        w.add("other", vec![], t(11, 0), t(12, 0)).unwrap();
+        let count = w.rename("old", "new").unwrap();
+        assert_eq!(count, 2);
+        let names: Vec<_> = w.log().unwrap().into_iter().map(|f| f.project).collect();
+        assert_eq!(names, vec!["new", "new", "other"]);
+    }
+
+    #[test]
+    fn rename_updates_active_frame_if_tracked() {
+        let w = w();
+        w.start("old", vec![], t(9, 0)).unwrap();
+        let count = w.rename("old", "new").unwrap();
+        assert_eq!(count, 1);
+        assert_eq!(w.status().unwrap().unwrap().project, "new");
+    }
+
+    #[test]
+    fn rename_unknown_project_returns_error() {
+        let w = w();
+        assert!(matches!(
+            w.rename("ghost", "new").unwrap_err(),
+            WatsonError::ProjectNotFound(_)
         ));
     }
 

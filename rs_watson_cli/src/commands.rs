@@ -75,8 +75,20 @@ pub(crate) enum Commands {
     },
     /// Remove a recorded frame interactively
     Remove,
+    /// Rename a project across all recorded frames
+    Rename {
+        /// Current project name
+        from: String,
+        /// New project name
+        to: String,
+    },
     /// List all projects that have been tracked
     Projects,
+    /// Print shell completion script to stdout
+    Completions {
+        /// Shell to generate completions for
+        shell: clap_complete::Shell,
+    },
 }
 
 /// Converts a Watson error into an anyhow error.
@@ -108,7 +120,7 @@ where
     S::Error: std::error::Error + Send + Sync + 'static,
 {
     match command {
-        Commands::Init => unreachable!("handled before dispatch"),
+        Commands::Init | Commands::Completions { .. } => unreachable!("handled before dispatch"),
 
         Commands::Start { project, tags, at } => {
             let time = at.map(|s| parse_at(&s)).transpose()?.unwrap_or_else(Utc::now);
@@ -369,6 +381,18 @@ where
                 "Removed ".red().bold(),
                 frame.project.yellow().bold(),
                 fmt_tags(&frame.tags),
+            );
+        }
+
+        Commands::Rename { from, to } => {
+            let count = watson.rename(&from, &to).map_err(w_err)?;
+            println!(
+                "{}  {}  {}  {} {}",
+                "Renamed".green().bold(),
+                from.yellow().bold(),
+                "→".white(),
+                to.yellow().bold(),
+                format!("({count} updated)").bright_black(),
             );
         }
 
