@@ -55,6 +55,19 @@ impl<S: Storage> Watson<S> {
         Ok(ActiveFrame::from(active))
     }
 
+    pub fn projects(&self) -> Result<Vec<String>, WatsonError<S::Error>> {
+        let mut names: Vec<String> = self
+            .storage
+            .load_frames()
+            .map_err(WatsonError::Storage)?
+            .into_iter()
+            .map(|r| r.project)
+            .collect();
+        names.sort();
+        names.dedup();
+        Ok(names)
+    }
+
     pub fn log(&self) -> Result<Vec<Frame>, WatsonError<S::Error>> {
         let mut frames: Vec<Frame> = self
             .storage

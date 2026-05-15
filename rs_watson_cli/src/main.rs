@@ -48,6 +48,8 @@ enum Commands {
     Report,
     /// Edit a recorded frame interactively
     Edit,
+    /// List all projects that have been tracked
+    Projects,
 }
 
 fn main() {
@@ -243,6 +245,16 @@ fn run() -> Result<()> {
                 fmt_time(updated.end).bright_white(),
             );
             println!("  {}", fmt_duration(updated.end - updated.start).magenta().bold());
+        }
+        Commands::Projects => {
+            let projects = watson.projects().map_err(|e| anyhow::anyhow!("{e}"))?;
+            if projects.is_empty() {
+                println!("{}", "No projects recorded yet.".bright_black());
+            } else {
+                for name in &projects {
+                    println!("{}", name.yellow().bold());
+                }
+            }
         }
         Commands::Report => {
             let frames = watson.log().map_err(|e| anyhow::anyhow!("{e}"))?;
