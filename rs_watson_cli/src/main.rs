@@ -1,12 +1,16 @@
+mod config;
+
 use std::collections::BTreeMap;
 use std::process;
 
 use anyhow::{Context, Result};
 use chrono::{DateTime, Duration, Local, NaiveDate, NaiveTime, TimeZone, Utc};
 use clap::{Parser, Subcommand};
+use config::{Config, StorageProvider};
 use dialoguer::{Input, Select, theme::ColorfulTheme};
 use owo_colors::OwoColorize;
 use rs_watson::{Frame, Report, Watson};
+use rs_watson_storage::Storage;
 use rs_watson_storage::json::JsonStorage;
 
 #[derive(Parser)]
@@ -76,6 +80,7 @@ fn main() {
 
 fn run() -> Result<()> {
     let cli = Cli::parse();
+    let config = Config::load()?;
 
     let data_dir = dirs::data_dir()
         .context("Could not determine data directory")?
@@ -83,10 +88,21 @@ fn run() -> Result<()> {
     std::fs::create_dir_all(&data_dir)
         .with_context(|| format!("Could not create data directory: {}", data_dir.display()))?;
 
-    let storage = JsonStorage::new(&data_dir);
-    let watson = Watson::new(storage);
+    match config.storage.provider {
+        StorageProvider::Json => {
+            dispatch(Watson::new(JsonStorage::new(&data_dir)), cli.command)?;
+        }
+    }
 
-    match cli.command {
+    Ok(())
+}
+
+fn dispatch<S>(watson: Watson<S>, command: Commands) -> Result<()>
+where
+    S: Storage,
+    S::Error: std::error::Error + Send + Sync + 'static,
+{
+    match command {
         Commands::Start { project, tags, at } => {
             let time = at.map(|s| parse_at(&s)).transpose()?.unwrap_or_else(Utc::now);
             let frame = watson

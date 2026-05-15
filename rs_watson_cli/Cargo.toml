@@ -16,3 +16,5 @@ dirs = "6.0.0"
 owo-colors = "4.3.0"
 rs_watson = { version = "0.1.0", path = "../rs_watson" }
 rs_watson_storage = { version = "0.1.0", path = "../rs_watson_storage" }
+serde = { version = "1.0.228", features = ["derive"] }
+toml = "1.1.2"
