@@ -28,6 +28,16 @@ impl JsonStorage {
     }
 }
 
+/// Writes `data` to a `.tmp` sibling of `path`, then renames it into place.
+/// `rename` is atomic on POSIX when src and dst are on the same filesystem,
+/// so a crash mid-write never leaves a partial file at the real path.
+fn write_atomic(path: &Path, data: &str) -> std::io::Result<()> {
+    let tmp = path.with_extension("json.tmp");
+    fs::write(&tmp, data)?;
+    fs::rename(&tmp, path)?;
+    Ok(())
+}
+
 impl Storage for JsonStorage {
     type Error = JsonStorageError;
 
@@ -41,7 +51,7 @@ impl Storage for JsonStorage {
 
     fn save_frames(&self, frames: &[FrameRecord]) -> Result<(), Self::Error> {
         let data = serde_json::to_string_pretty(frames)?;
-        fs::write(&self.frames_path, data)?;
+        write_atomic(&self.frames_path, &data)?;
         Ok(())
     }
 
@@ -57,7 +67,7 @@ impl Storage for JsonStorage {
         match frame {
             Some(f) => {
                 let data = serde_json::to_string_pretty(f)?;
-                fs::write(&self.state_path, data)?;
+                write_atomic(&self.state_path, &data)?;
             }
             None => {
                 if self.state_path.exists() {
