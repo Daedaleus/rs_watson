@@ -6,6 +6,9 @@ use tempfile::TempDir;
 fn watson(dir: &TempDir) -> Command {
     let mut cmd = Command::cargo_bin("watson").unwrap();
     cmd.env("RS_WATSON_DATA_DIR", dir.path());
+    // Point config dir at the same temp dir so the real ~/.config/rs_watson/config.toml
+    // is never read — tests are fully isolated and use compiled-in defaults.
+    cmd.env("RS_WATSON_CONFIG_DIR", dir.path());
     cmd
 }
 
@@ -644,7 +647,7 @@ fn epics_shows_message_when_none_configured() {
     let cfg = TempDir::new().unwrap();
     std::fs::write(
         cfg.path().join("config.toml"),
-        "[storage]\nprovider=\"json\"\n",
+        "# no provider set — uses compiled-in default\n",
     )
     .unwrap();
 
@@ -705,7 +708,7 @@ fn report_epic_fails_without_configured_epics() {
     let cfg = TempDir::new().unwrap();
     std::fs::write(
         cfg.path().join("config.toml"),
-        "[storage]\nprovider=\"json\"\n",
+        "# no provider set — uses compiled-in default\n",
     )
     .unwrap();
 

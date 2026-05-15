@@ -6,3 +6,10 @@ members = [
     "rs_watson_export",
 ]
 resolver = "2"
+
+[profile.release]
+opt-level = 3      # maximum optimization
+lto = true         # fat LTO: cross-crate inlining and dead-code elimination
+codegen-units = 1  # single codegen unit — slower compile, better output
+strip = true       # strip debug symbols from the final binary
+panic = "abort"    # no unwinding machinery — smaller binary, faster panics

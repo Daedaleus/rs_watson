@@ -3,14 +3,21 @@ name = "rs_watson_storage"
 version = "0.1.0"
 edition = "2024"
 
+[features]
+default = ["json", "sqlite"]
+json = ["dep:serde_json"]
+sqlite = ["dep:rusqlite", "dep:rusqlite_migration"]
+
 [dependencies]
 chrono = { version = "0.4.44", features = ["serde"] }
-rusqlite = { version = "0.39.0", features = ["bundled"] }
-rusqlite_migration = "2.5.0"
 serde = { version = "1.0.228", features = ["derive"] }
-serde_json = "1.0.149"
 thiserror = "2.0.18"
 uuid = { version = "1.23.1", features = ["v4", "serde"] }
+
+# optional backends
+serde_json = { version = "1.0.149", optional = true }
+rusqlite = { version = "0.39.0", features = ["bundled"], optional = true }
+rusqlite_migration = { version = "2.5.0", optional = true }
 
 [dev-dependencies]
 tempfile = "3.27.0"

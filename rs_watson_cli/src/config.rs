@@ -15,7 +15,7 @@ pub struct Config {
 
 // --- [storage] -------------------------------------------------------------
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Default, Deserialize, Serialize)]
 pub struct StorageConfig {
     /// Storage backend. Default: json.
     #[serde(default)]
@@ -25,20 +25,28 @@ pub struct StorageConfig {
     pub data_dir: Option<String>,
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone, Copy, Default)]
+#[cfg(not(any(feature = "storage-json", feature = "storage-sqlite")))]
+compile_error!(
+    "rs_watson_cli: at least one storage backend must be enabled \
+     (features: storage-json, storage-sqlite)"
+);
+
+#[derive(Debug, Deserialize, Serialize, Clone, Copy)]
 #[serde(rename_all = "lowercase")]
 pub enum StorageProvider {
+    #[cfg(feature = "storage-json")]
     Json,
-    #[default]
+    #[cfg(feature = "storage-sqlite")]
     Sqlite,
 }
 
-impl Default for StorageConfig {
+impl Default for StorageProvider {
     fn default() -> Self {
-        StorageConfig {
-            provider: StorageProvider::Sqlite,
-            data_dir: None,
-        }
+        // SQLite takes priority when both are compiled in.
+        #[cfg(feature = "storage-sqlite")]
+        return StorageProvider::Sqlite;
+        #[cfg(all(feature = "storage-json", not(feature = "storage-sqlite")))]
+        return StorageProvider::Json;
     }
 }
 

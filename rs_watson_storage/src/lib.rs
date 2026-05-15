@@ -1,4 +1,7 @@
+#[cfg(feature = "json")]
 pub mod json;
+
+#[cfg(feature = "sqlite")]
 pub mod sqlite;
 
 use chrono::{DateTime, Utc};

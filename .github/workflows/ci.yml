@@ -66,3 +66,38 @@ jobs:
 
       - name: cargo test
         run: cargo test
+
+  test-features:
+    name: Feature check (${{ matrix.features }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - features: storage-sqlite only
+            args: --no-default-features --features storage-sqlite
+          - features: storage-json only
+            args: --no-default-features --features storage-json
+          - features: all backends
+            args: --features storage-json,storage-sqlite
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: features-${{ matrix.features }}-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: cargo build (${{ matrix.features }})
+        run: cargo build -p rs_watson_cli ${{ matrix.args }}
+
+      - name: cargo test (${{ matrix.features }})
+        run: cargo test -p rs_watson_cli ${{ matrix.args }}

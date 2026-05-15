@@ -4,6 +4,7 @@ use owo_colors::OwoColorize;
 
 use crate::config::{BehaviorConfig, Config, LogConfig, StorageConfig, StorageProvider, WeekStart};
 
+#[allow(clippy::vec_init_then_push)] // cfg-gated pushes require this pattern
 pub(crate) fn cmd_init() -> Result<()> {
     let config_dir = dirs::config_dir()
         .context("Could not determine config directory")?
@@ -23,16 +24,21 @@ pub(crate) fn cmd_init() -> Result<()> {
 
     println!();
 
-    // [storage]
+    // [storage] — only show backends that were compiled in.
+    // The cfg-gated push calls require Vec::new() + push pattern.
+    let mut storage_options: Vec<(&str, StorageProvider)> = Vec::new();
+    #[cfg(feature = "storage-sqlite")]
+    storage_options.push(("SQLite  (watson.db)", StorageProvider::Sqlite));
+    #[cfg(feature = "storage-json")]
+    storage_options.push(("JSON  (frames.json + state.json)", StorageProvider::Json));
+
+    let labels: Vec<&str> = storage_options.iter().map(|(l, _)| *l).collect();
     let provider_idx = Select::with_theme(&ColorfulTheme::default())
         .with_prompt("Storage provider")
-        .items(["SQLite  (watson.db)", "JSON  (frames.json + state.json)"])
+        .items(&labels)
         .default(0)
         .interact()?;
-    let provider = match provider_idx {
-        1 => StorageProvider::Json,
-        _ => StorageProvider::Sqlite,
-    };
+    let provider = storage_options[provider_idx].1;
 
     println!();
 

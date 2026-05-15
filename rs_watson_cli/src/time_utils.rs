@@ -146,13 +146,13 @@ pub(crate) fn check_future(dt: DateTime<Utc>, config: &Config) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config::{BehaviorConfig, LogConfig, StorageConfig, StorageProvider, WeekStart};
+    use crate::config::{BehaviorConfig, LogConfig, StorageConfig, WeekStart};
     use chrono::Duration;
 
     fn cfg(allow_future: bool) -> Config {
         Config {
             storage: StorageConfig {
-                provider: StorageProvider::Json,
+                provider: Default::default(),
                 data_dir: None,
             },
             behavior: BehaviorConfig {

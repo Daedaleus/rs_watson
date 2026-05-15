@@ -10,11 +10,14 @@ use anyhow::{Context, Result};
 use clap::{CommandFactory, Parser};
 use owo_colors::OwoColorize;
 use rs_watson::Watson;
-use rs_watson_storage::json::JsonStorage;
-use rs_watson_storage::sqlite::SqliteStorage;
 
 use crate::commands::{Commands, cmd_init, dispatch};
 use crate::config::{Config, StorageProvider};
+
+#[cfg(feature = "storage-json")]
+use rs_watson_storage::json::JsonStorage;
+#[cfg(feature = "storage-sqlite")]
+use rs_watson_storage::sqlite::SqliteStorage;
 
 #[derive(Parser)]
 #[command(name = "watson", about = "Time tracking tool")]
@@ -57,6 +60,7 @@ fn run() -> Result<()> {
         .with_context(|| format!("Could not create data directory: {}", data_dir.display()))?;
 
     match config.storage.provider {
+        #[cfg(feature = "storage-json")]
         StorageProvider::Json => {
             dispatch(
                 Watson::new(JsonStorage::new(&data_dir)),
@@ -64,6 +68,7 @@ fn run() -> Result<()> {
                 &config,
             )?;
         }
+        #[cfg(feature = "storage-sqlite")]
         StorageProvider::Sqlite => {
             let storage = SqliteStorage::new(data_dir.join("watson.db"))
                 .context("Could not open SQLite database")?;
