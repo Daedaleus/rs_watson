@@ -90,14 +90,14 @@ fn run() -> Result<()> {
 
     match config.storage.provider {
         StorageProvider::Json => {
-            dispatch(Watson::new(JsonStorage::new(&data_dir)), cli.command)?;
+            dispatch(Watson::new(JsonStorage::new(&data_dir)), cli.command, &config)?;
         }
     }
 
     Ok(())
 }
 
-fn dispatch<S>(watson: Watson<S>, command: Commands) -> Result<()>
+fn dispatch<S>(watson: Watson<S>, command: Commands, config: &Config) -> Result<()>
 where
     S: Storage,
     S::Error: std::error::Error + Send + Sync + 'static,
@@ -105,6 +105,7 @@ where
     match command {
         Commands::Start { project, tags, at } => {
             let time = at.map(|s| parse_at(&s)).transpose()?.unwrap_or_else(Utc::now);
+            check_future(time, config)?;
             let frame = watson
                 .start(&project, tags, time)
                 .map_err(|e| anyhow::anyhow!("{e}"))?;
@@ -119,6 +120,7 @@ where
         }
         Commands::Stop { at } => {
             let time = at.map(|s| parse_at(&s)).transpose()?.unwrap_or_else(Utc::now);
+            check_future(time, config)?;
             let frame = watson
                 .stop(time)
                 .map_err(|e| anyhow::anyhow!("{e}"))?;
@@ -280,6 +282,8 @@ where
         Commands::Add { project, tags, from, to } => {
             let start = parse_at(&from)?;
             let end   = parse_at(&to)?;
+            check_future(start, config)?;
+            check_future(end, config)?;
             let frame = watson
                 .add(&project, tags, start, end)
                 .map_err(|e| anyhow::anyhow!("{e}"))?;
@@ -407,6 +411,15 @@ fn print_report_grouped(frames: &[Frame], show_total: bool) {
             fmt_duration(grand_total).magenta().bold(),
         );
     }
+}
+
+fn check_future(dt: DateTime<Utc>, config: &Config) -> Result<()> {
+    if !config.behavior.allow_future_times && dt > Utc::now() {
+        anyhow::bail!(
+            "Future times are not allowed. Set allow_future_times = true in config to enable."
+        );
+    }
+    Ok(())
 }
 
 /// Parses a local time string (HH:MM or HH:MM:SS) relative to today and returns UTC.

@@ -1,10 +1,15 @@
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, Default)]
 pub struct Config {
+    #[serde(default)]
     pub storage: StorageConfig,
+    #[serde(default)]
+    pub behavior: BehaviorConfig,
 }
+
+// --- [storage] -------------------------------------------------------------
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct StorageConfig {
@@ -17,15 +22,32 @@ pub enum StorageProvider {
     Json,
 }
 
-impl Default for Config {
+impl Default for StorageConfig {
     fn default() -> Self {
-        Config {
-            storage: StorageConfig {
-                provider: StorageProvider::Json,
-            },
+        StorageConfig {
+            provider: StorageProvider::Json,
         }
     }
 }
+
+// --- [behavior] ------------------------------------------------------------
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct BehaviorConfig {
+    /// Allow start, stop and add to accept times in the future. Default: false.
+    #[serde(default)]
+    pub allow_future_times: bool,
+}
+
+impl Default for BehaviorConfig {
+    fn default() -> Self {
+        BehaviorConfig {
+            allow_future_times: false,
+        }
+    }
+}
+
+// --- Loading ---------------------------------------------------------------
 
 impl Config {
     pub fn load() -> Result<Self> {
