@@ -30,14 +30,14 @@ pub(crate) enum Commands {
         /// Tags (can be specified multiple times)
         #[arg(short = 't', long = "tag")]
         tags: Vec<String>,
-        /// Start time in local time, e.g. 09:00 or 09:00:00 (default: now)
-        #[arg(long, value_name = "HH:MM")]
+        /// Start time: 09:00, 2026-05-14 09:00, or "yesterday 09:00" (default: now)
+        #[arg(long, value_name = "DATETIME")]
         at: Option<String>,
     },
     /// Stop the current tracking session
     Stop {
-        /// Stop time in local time, e.g. 17:30 or 17:30:00 (default: now)
-        #[arg(long, value_name = "HH:MM")]
+        /// Stop time: 17:30, 2026-05-14 17:30, or "yesterday 17:30" (default: now)
+        #[arg(long, value_name = "DATETIME")]
         at: Option<String>,
     },
     /// Cancel the current tracking session without saving
@@ -87,11 +87,11 @@ pub(crate) enum Commands {
         /// Tags (can be specified multiple times)
         #[arg(short = 't', long = "tag")]
         tags: Vec<String>,
-        /// Start time in local time, e.g. 09:00 or 09:00:00
-        #[arg(long, value_name = "HH:MM")]
+        /// Start time: 09:00, 2026-05-14 09:00, or "yesterday 09:00"
+        #[arg(long, value_name = "DATETIME")]
         from: String,
-        /// End time in local time, e.g. 17:30 or 17:30:00
-        #[arg(long, value_name = "HH:MM")]
+        /// End time: 17:30, 2026-05-14 17:30, or "yesterday 17:30"
+        #[arg(long, value_name = "DATETIME")]
         to: String,
     },
     /// Remove a recorded frame interactively

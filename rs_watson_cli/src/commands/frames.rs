@@ -158,8 +158,8 @@ pub(super) fn cmd_edit<S: Storage<Error: std::error::Error + Send + Sync + 'stat
         .filter(|s| !s.is_empty())
         .collect();
 
-    let new_start = prompt_time("Start (HH:MM or HH:MM:SS)", frame.start)?;
-    let new_end = prompt_time("End   (HH:MM or HH:MM:SS)", frame.end)?;
+    let new_start = prompt_time("Start  (HH:MM or YYYY-MM-DD HH:MM)", frame.start)?;
+    let new_end = prompt_time("End    (HH:MM or YYYY-MM-DD HH:MM)", frame.end)?;
 
     if new_end <= new_start {
         anyhow::bail!("End time must be after start time");

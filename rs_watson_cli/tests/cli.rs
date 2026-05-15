@@ -300,6 +300,69 @@ fn rename_unknown_project_fails() {
         .stderr(contains("not found"));
 }
 
+// --- past date entry ---
+
+#[test]
+fn add_with_explicit_past_date() {
+    let dir = TempDir::new().unwrap();
+    watson(&dir)
+        .args([
+            "add",
+            "-p",
+            "backend",
+            "--from",
+            "2026-01-01 09:00",
+            "--to",
+            "2026-01-01 10:00",
+        ])
+        .assert()
+        .success()
+        .stdout(contains("Added"));
+    watson(&dir)
+        .args(["log"])
+        .assert()
+        .success()
+        .stdout(contains("backend"));
+}
+
+#[test]
+fn start_with_explicit_past_date() {
+    let dir = TempDir::new().unwrap();
+    watson(&dir)
+        .args(["start", "-p", "backend", "--at", "2026-01-01 09:00"])
+        .assert()
+        .success()
+        .stdout(contains("Starting"));
+    watson(&dir)
+        .args(["stop", "--at", "2026-01-01 10:00"])
+        .assert()
+        .success()
+        .stdout(contains("Stopped"));
+}
+
+#[test]
+fn add_with_yesterday_shortcut() {
+    let dir = TempDir::new().unwrap();
+    watson(&dir)
+        .args([
+            "add",
+            "-p",
+            "retro",
+            "--from",
+            "yesterday 09:00",
+            "--to",
+            "yesterday 10:00",
+        ])
+        .assert()
+        .success()
+        .stdout(contains("Added"));
+    watson(&dir)
+        .args(["log"])
+        .assert()
+        .success()
+        .stdout(contains("retro"));
+}
+
 // --- auto-stop on start ---
 
 #[test]

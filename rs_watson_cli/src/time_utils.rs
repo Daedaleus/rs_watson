@@ -1,5 +1,7 @@
 use anyhow::{Context, Result};
-use chrono::{DateTime, Datelike, Duration, Local, NaiveDate, NaiveTime, TimeZone, Utc};
+use chrono::{
+    DateTime, Datelike, Duration, Local, NaiveDate, NaiveDateTime, NaiveTime, TimeZone, Utc,
+};
 use dialoguer::{Input, theme::ColorfulTheme};
 use owo_colors::OwoColorize;
 
@@ -27,32 +29,91 @@ pub(crate) fn parse_date(input: &str, week_start: WeekStart) -> Result<NaiveDate
     }
 }
 
-/// Parses a local time string (HH:MM or HH:MM:SS) relative to today and returns UTC.
+/// Parses a local datetime string and returns UTC. Accepted formats:
+/// - `HH:MM` / `HH:MM:SS`  → today's date
+/// - `YYYY-MM-DD HH:MM` / `YYYY-MM-DD HH:MM:SS`  → explicit date
+/// - `today HH:MM[:SS]` / `yesterday HH:MM[:SS]`  → relative date shortcuts
 pub(crate) fn parse_at(input: &str) -> Result<DateTime<Utc>> {
-    let local_now = Local::now();
-    let time = NaiveTime::parse_from_str(input.trim(), "%H:%M:%S")
-        .or_else(|_| NaiveTime::parse_from_str(input.trim(), "%H:%M"))
-        .with_context(|| format!("Invalid time \"{input}\", expected HH:MM or HH:MM:SS"))?;
-    let naive_local = local_now.date_naive().and_time(time);
-    Local
-        .from_local_datetime(&naive_local)
-        .single()
-        .map(|dt| dt.with_timezone(&Utc))
-        .context("Ambiguous time (DST transition)")
+    let s = input.trim();
+
+    // YYYY-MM-DD HH:MM:SS
+    if let Ok(naive) = NaiveDateTime::parse_from_str(s, "%Y-%m-%d %H:%M:%S") {
+        return local_naive_to_utc(naive);
+    }
+    // YYYY-MM-DD HH:MM
+    if let Ok(naive) = NaiveDateTime::parse_from_str(s, "%Y-%m-%d %H:%M") {
+        return local_naive_to_utc(naive);
+    }
+
+    // "today HH:MM[:SS]" / "yesterday HH:MM[:SS]"
+    if let Some(dt) = parse_relative_datetime(s)? {
+        return Ok(dt);
+    }
+
+    // HH:MM:SS or HH:MM → today
+    let time = NaiveTime::parse_from_str(s, "%H:%M:%S")
+        .or_else(|_| NaiveTime::parse_from_str(s, "%H:%M"))
+        .with_context(|| format!(
+            "Invalid time \"{s}\". Use HH:MM, HH:MM:SS, YYYY-MM-DD HH:MM[:SS], or yesterday/today HH:MM[:SS]"
+        ))?;
+    local_naive_to_utc(Local::now().date_naive().and_time(time))
 }
 
-/// Prompts for a time value in local time, pre-filled with the local representation of `default`.
-/// Parses the input as local time on the same local date, then converts back to UTC.
+fn local_naive_to_utc(naive: NaiveDateTime) -> Result<DateTime<Utc>> {
+    Local
+        .from_local_datetime(&naive)
+        .single()
+        .map(|dt| dt.with_timezone(&Utc))
+        .context("Ambiguous datetime (DST transition)")
+}
+
+fn parse_relative_datetime(input: &str) -> Result<Option<DateTime<Utc>>> {
+    let (word, time_str) = match input.split_once(' ') {
+        Some(p) => p,
+        None => return Ok(None),
+    };
+
+    let today = Local::now().date_naive();
+    let date = match word.to_lowercase().as_str() {
+        "today" => today,
+        "yesterday" => today - Duration::days(1),
+        _ => return Ok(None),
+    };
+
+    let time = NaiveTime::parse_from_str(time_str.trim(), "%H:%M:%S")
+        .or_else(|_| NaiveTime::parse_from_str(time_str.trim(), "%H:%M"))
+        .ok();
+
+    match time {
+        Some(t) => Ok(Some(local_naive_to_utc(date.and_time(t))?)),
+        None => Ok(None),
+    }
+}
+
+/// Prompts for a datetime value in local time. Pre-filled with the full date+time of `default`.
+///
+/// Accepted inputs:
+/// - `HH:MM[:SS]`  → keeps the original date, changes only the time
+/// - `YYYY-MM-DD HH:MM[:SS]`  → fully replaces date and time
+/// - `yesterday HH:MM[:SS]` / `today HH:MM[:SS]`  → relative date shortcuts
 pub(crate) fn prompt_time(prompt: &str, default: DateTime<Utc>) -> Result<DateTime<Utc>> {
     let local_default = default.with_timezone(&Local);
     loop {
         let input = Input::<String>::with_theme(&ColorfulTheme::default())
             .with_prompt(prompt)
-            .with_initial_text(local_default.format("%H:%M:%S").to_string())
+            .with_initial_text(local_default.format("%Y-%m-%d %H:%M:%S").to_string())
             .interact_text()?;
 
-        let parsed = NaiveTime::parse_from_str(input.trim(), "%H:%M:%S")
-            .or_else(|_| NaiveTime::parse_from_str(input.trim(), "%H:%M"));
+        let s = input.trim();
+
+        // Try all absolute/relative datetime formats first.
+        if let Ok(dt) = parse_at(s) {
+            return Ok(dt);
+        }
+
+        // Fall back: time-only on the original frame's date (not today).
+        let parsed = NaiveTime::parse_from_str(s, "%H:%M:%S")
+            .or_else(|_| NaiveTime::parse_from_str(s, "%H:%M"));
 
         match parsed {
             Ok(t) => {
@@ -65,7 +126,10 @@ pub(crate) fn prompt_time(prompt: &str, default: DateTime<Utc>) -> Result<DateTi
                     ),
                 }
             }
-            Err(_) => eprintln!("  {} Use HH:MM or HH:MM:SS", "Invalid time.".red()),
+            Err(_) => eprintln!(
+                "  {} Use HH:MM, YYYY-MM-DD HH:MM, or yesterday/today HH:MM",
+                "Invalid.".red()
+            ),
         }
     }
 }
@@ -154,6 +218,40 @@ mod tests {
     }
 
     // --- parse_at ---
+
+    #[test]
+    fn parse_at_accepts_full_datetime() {
+        let dt = parse_at("2026-05-14 09:00").unwrap();
+        let local = dt.with_timezone(&Local);
+        assert_eq!(
+            local.format("%Y-%m-%d %H:%M").to_string(),
+            "2026-05-14 09:00"
+        );
+    }
+
+    #[test]
+    fn parse_at_accepts_full_datetime_with_seconds() {
+        let dt = parse_at("2026-05-14 09:30:15").unwrap();
+        let local = dt.with_timezone(&Local);
+        assert_eq!(
+            local.format("%Y-%m-%d %H:%M:%S").to_string(),
+            "2026-05-14 09:30:15"
+        );
+    }
+
+    #[test]
+    fn parse_at_accepts_yesterday_shortcut() {
+        let expected_date = (Local::now() - Duration::days(1)).date_naive();
+        let dt = parse_at("yesterday 09:00").unwrap();
+        assert_eq!(dt.with_timezone(&Local).date_naive(), expected_date);
+    }
+
+    #[test]
+    fn parse_at_accepts_today_shortcut() {
+        let expected_date = Local::now().date_naive();
+        let dt = parse_at("today 10:30").unwrap();
+        assert_eq!(dt.with_timezone(&Local).date_naive(), expected_date);
+    }
 
     #[test]
     fn parse_at_rejects_invalid_format() {
