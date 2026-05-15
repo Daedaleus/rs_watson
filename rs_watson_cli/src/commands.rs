@@ -1,3 +1,6 @@
+use std::fs;
+use std::io;
+
 use anyhow::{Context, Result};
 use chrono::Utc;
 use clap::Subcommand;
@@ -44,6 +47,9 @@ pub(crate) enum Commands {
         /// End date filter (YYYY-MM-DD or shortcuts: today, yesterday, week, month)
         #[arg(long, value_name = "DATE")]
         to: Option<String>,
+        /// Show only the last N frames
+        #[arg(long, value_name = "N")]
+        limit: Option<usize>,
     },
     /// Show aggregated report for today
     Today,
@@ -91,6 +97,40 @@ pub(crate) enum Commands {
         /// Shell to generate completions for
         shell: clap_complete::Shell,
     },
+    /// Export frames to a file or stdout
+    Export {
+        /// Output format
+        #[arg(long, value_enum, default_value = "csv")]
+        format: ExportFormat,
+        /// Output file (default: stdout)
+        #[arg(long, value_name = "FILE")]
+        output: Option<String>,
+        /// Start date filter
+        #[arg(long, value_name = "DATE")]
+        from: Option<String>,
+        /// End date filter
+        #[arg(long, value_name = "DATE")]
+        to: Option<String>,
+    },
+    /// Import frames from an external source
+    Import {
+        /// Source format
+        #[arg(long, value_enum, default_value = "watson")]
+        source: ImportSource,
+        /// Path to the source file (default: ~/.local/share/watson/frames)
+        #[arg(long, value_name = "FILE")]
+        file: Option<String>,
+    },
+}
+
+#[derive(clap::ValueEnum, Clone, Copy)]
+pub(crate) enum ExportFormat {
+    Csv,
+}
+
+#[derive(clap::ValueEnum, Clone, Copy)]
+pub(crate) enum ImportSource {
+    Watson,
 }
 
 /// Converts a Watson error into an anyhow error.
@@ -122,7 +162,9 @@ where
     S::Error: std::error::Error + Send + Sync + 'static,
 {
     match command {
-        Commands::Init | Commands::Completions { .. } => unreachable!("handled before dispatch"),
+        Commands::Init | Commands::Completions { .. } => {
+            unreachable!("handled before dispatch")
+        }
 
         Commands::Start { project, tags, at } => {
             let time = at
@@ -204,8 +246,12 @@ where
             }
         }
 
-        Commands::Log { from, to } => {
-            let frames = apply_date_filter(watson.log().map_err(w_err)?, from, to)?;
+        Commands::Log { from, to, limit } => {
+            let mut frames = apply_date_filter(watson.log().map_err(w_err)?, from, to)?;
+            if let Some(n) = limit {
+                let skip = frames.len().saturating_sub(n);
+                frames = frames.into_iter().skip(skip).collect();
+            }
             if frames.is_empty() {
                 println!("{}", "No frames recorded.".bright_black());
             } else {
@@ -439,9 +485,109 @@ where
                 }
             }
         }
+
+        Commands::Export {
+            format,
+            output,
+            from,
+            to,
+        } => {
+            use rs_watson_export::Exporter;
+            use rs_watson_export::csv::CsvExporter;
+
+            let frames = apply_date_filter(watson.log().map_err(w_err)?, from, to)?;
+            if frames.is_empty() {
+                println!("{}", "No frames to export.".bright_black());
+                return Ok(());
+            }
+
+            match format {
+                ExportFormat::Csv => match output {
+                    Some(path) => {
+                        let file = fs::File::create(&path)
+                            .with_context(|| format!("Could not create file: {path}"))?;
+                        CsvExporter.export(&frames, file).context("Export failed")?;
+                        println!(
+                            "{} {} {} {}",
+                            "Exported".green().bold(),
+                            frames.len().to_string().yellow().bold(),
+                            "frames to".bright_black(),
+                            path.bright_white(),
+                        );
+                    }
+                    None => {
+                        CsvExporter
+                            .export(&frames, io::stdout())
+                            .context("Export failed")?;
+                    }
+                },
+            }
+        }
+
+        Commands::Import { source, file } => {
+            let path = match (source, file) {
+                (ImportSource::Watson, Some(p)) => std::path::PathBuf::from(p),
+                (ImportSource::Watson, None) => dirs::data_dir()
+                    .context("Could not determine data directory")?
+                    .join("watson")
+                    .join("frames"),
+            };
+
+            let content = fs::read_to_string(&path)
+                .with_context(|| format!("Could not read: {}", path.display()))?;
+
+            let frames = parse_watson_frames(&content)?;
+            let count = frames.len();
+            watson.import_frames(frames).map_err(w_err)?;
+
+            println!(
+                "{} {} {}",
+                "Imported".green().bold(),
+                count.to_string().yellow().bold(),
+                "frames from Watson.".bright_black(),
+            );
+        }
     }
 
     Ok(())
+}
+
+/// Parses the original Watson frames file format.
+/// Each frame is stored as: [id, start_ts, stop_ts, project, updated_ts, [tags]]
+fn parse_watson_frames(content: &str) -> Result<Vec<rs_watson::Frame>> {
+    use chrono::{TimeZone, Utc};
+
+    let raw: Vec<serde_json::Value> =
+        serde_json::from_str(content).context("Invalid Watson frames file")?;
+
+    raw.into_iter()
+        .enumerate()
+        .map(|(i, entry)| {
+            let ctx = || format!("Frame #{i}");
+            let arr = entry.as_array().with_context(ctx)?;
+            let start_ts = arr.get(1).and_then(|v| v.as_i64()).with_context(ctx)?;
+            let stop_ts = arr.get(2).and_then(|v| v.as_i64()).with_context(ctx)?;
+            let project = arr
+                .get(3)
+                .and_then(|v| v.as_str())
+                .with_context(ctx)?
+                .to_string();
+            let tags: Vec<String> = arr
+                .get(5)
+                .and_then(|v| v.as_array())
+                .map(|a| {
+                    a.iter()
+                        .filter_map(|t| t.as_str().map(String::from))
+                        .collect()
+                })
+                .unwrap_or_default();
+
+            let start = Utc.timestamp_opt(start_ts, 0).single().with_context(ctx)?;
+            let end = Utc.timestamp_opt(stop_ts, 0).single().with_context(ctx)?;
+
+            Ok(rs_watson::Frame::new(project, tags, start, end))
+        })
+        .collect()
 }
 
 pub(crate) fn cmd_init() -> Result<()> {

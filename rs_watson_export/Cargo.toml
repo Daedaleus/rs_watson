@@ -1,0 +1,13 @@
+[package]
+name = "rs_watson_export"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+csv = "1.4.0"
+rs_watson = { version = "0.1.0", path = "../rs_watson" }
+thiserror = "2.0.18"
+
+[dev-dependencies]
+chrono = { version = "0.4.44", features = ["serde"] }
+uuid = { version = "1.23.1", features = ["v4", "serde"] }

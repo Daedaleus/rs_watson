@@ -17,8 +17,23 @@ pub enum WatsonError<E: std::error::Error + 'static> {
     ProjectNotFound(String),
     #[error("End time must be after start time")]
     InvalidTimeRange,
+    #[error("Time overlaps with existing frame for project \"{0}\"")]
+    OverlappingFrame(String),
     #[error("Storage error: {0}")]
     Storage(E),
+}
+
+/// Returns the first record whose interval overlaps with [start, end).
+/// When `end` is None (open interval for `start`), checks if `start` falls inside a frame.
+fn find_overlap(
+    start: DateTime<Utc>,
+    end: Option<DateTime<Utc>>,
+    records: &[FrameRecord],
+) -> Option<&FrameRecord> {
+    records.iter().find(|r| match end {
+        Some(e) => start < r.end && r.start < e,
+        None => start >= r.start && start < r.end,
+    })
 }
 
 pub struct Watson<S: Storage> {
@@ -94,8 +109,11 @@ impl<S: Storage> Watson<S> {
         if end <= start {
             return Err(WatsonError::InvalidTimeRange);
         }
-        let frame = Frame::new(project, tags, start, end);
         let mut records = self.storage.load_frames().map_err(WatsonError::Storage)?;
+        if let Some(conflict) = find_overlap(start, Some(end), &records) {
+            return Err(WatsonError::OverlappingFrame(conflict.project.clone()));
+        }
+        let frame = Frame::new(project, tags, start, end);
         records.push(FrameRecord::from(&frame));
         self.storage
             .save_frames(&records)
@@ -209,6 +227,21 @@ impl<S: Storage> Watson<S> {
         Ok(frame)
     }
 
+    /// Imports a list of frames, appending them to storage sorted by start time.
+    /// Does not check for overlaps — suitable for bulk migration.
+    pub fn import_frames(&self, frames: Vec<Frame>) -> Result<usize, WatsonError<S::Error>> {
+        let count = frames.len();
+        let mut records = self.storage.load_frames().map_err(WatsonError::Storage)?;
+        for frame in frames {
+            records.push(FrameRecord::from(&frame));
+        }
+        records.sort_by_key(|r| r.start);
+        self.storage
+            .save_frames(&records)
+            .map_err(WatsonError::Storage)?;
+        Ok(count)
+    }
+
     pub fn start(
         &self,
         project: impl Into<String>,
@@ -217,6 +250,10 @@ impl<S: Storage> Watson<S> {
     ) -> Result<ActiveFrame, WatsonError<S::Error>> {
         if let Some(active) = self.storage.load_active().map_err(WatsonError::Storage)? {
             return Err(WatsonError::AlreadyTracking(active.project));
+        }
+        let records = self.storage.load_frames().map_err(WatsonError::Storage)?;
+        if let Some(conflict) = find_overlap(at, None, &records) {
+            return Err(WatsonError::OverlappingFrame(conflict.project.clone()));
         }
         let frame = ActiveFrame::new(project, tags, at);
         let record = ActiveFrameRecord::from(&frame);
@@ -404,6 +441,32 @@ mod tests {
         ));
     }
 
+    // --- overlap ---
+
+    #[test]
+    fn add_rejects_overlap_with_existing_frame() {
+        let w = w();
+        w.add("backend", vec![], t(9, 0), t(11, 0)).unwrap();
+        let err = w.add("frontend", vec![], t(10, 0), t(12, 0)).unwrap_err();
+        assert!(matches!(err, WatsonError::OverlappingFrame(_)));
+    }
+
+    #[test]
+    fn start_rejects_time_inside_existing_frame() {
+        let w = w();
+        w.add("backend", vec![], t(9, 0), t(11, 0)).unwrap();
+        let err = w.start("frontend", vec![], t(10, 0)).unwrap_err();
+        assert!(matches!(err, WatsonError::OverlappingFrame(_)));
+    }
+
+    #[test]
+    fn add_adjacent_frames_do_not_overlap() {
+        let w = w();
+        w.add("backend", vec![], t(9, 0), t(10, 0)).unwrap();
+        // starts exactly when the previous one ends — no overlap
+        assert!(w.add("frontend", vec![], t(10, 0), t(11, 0)).is_ok());
+    }
+
     // --- remove ---
 
     #[test]
@@ -496,8 +559,13 @@ mod tests {
         let w = w();
         w.add("a", vec!["beta".into(), "alpha".into()], t(9, 0), t(10, 0))
             .unwrap();
-        w.add("b", vec!["alpha".into(), "gamma".into()], t(10, 0), t(11, 0))
-            .unwrap();
+        w.add(
+            "b",
+            vec!["alpha".into(), "gamma".into()],
+            t(10, 0),
+            t(11, 0),
+        )
+        .unwrap();
         assert_eq!(w.tags().unwrap(), vec!["alpha", "beta", "gamma"]);
     }
 

@@ -30,7 +30,10 @@ impl SqliteStorage {
         conn.pragma_update(None, "journal_mode", "WAL")?;
         conn.pragma_update(None, "foreign_keys", true)?;
 
-        let migrations = Migrations::new(vec![M::up(include_str!("migrations/001_initial.sql"))]);
+        let migrations = Migrations::new(vec![
+            M::up(include_str!("migrations/001_initial.sql")),
+            M::up(include_str!("migrations/002_add_start_index.sql")),
+        ]);
         migrations.to_latest(&mut conn)?;
 
         Ok(Self {
