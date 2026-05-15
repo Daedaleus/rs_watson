@@ -3052,6 +3052,7 @@ dependencies = [
  "eframe",
  "rs_watson",
  "rs_watson_storage",
+ "uuid",
 ]
 
 [[package]]
