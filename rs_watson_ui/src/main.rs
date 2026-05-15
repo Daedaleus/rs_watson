@@ -616,7 +616,12 @@ impl WatsonApp {
         } else if let Some(id) = to_delete {
             self.delete_confirm_id = Some(id);
         }
-        if let Some(id) = to_edit.and_then(|id| self.frames.iter().find(|f| f.id == id).map(|f| (id, f.clone()))) {
+        if let Some(id) = to_edit.and_then(|id| {
+            self.frames
+                .iter()
+                .find(|f| f.id == id)
+                .map(|f| (id, f.clone()))
+        }) {
             self.edit_state = Some(EditState::from_frame(&id.1));
             self.delete_confirm_id = None;
         }
