@@ -89,9 +89,13 @@ fn run() -> Result<()> {
 
     let config = Config::load()?;
 
-    let data_dir = dirs::data_dir()
-        .context("Could not determine data directory")?
-        .join("rs_watson");
+    let data_dir = if let Ok(dir) = std::env::var("RS_WATSON_DATA_DIR") {
+        std::path::PathBuf::from(dir)
+    } else {
+        dirs::data_dir()
+            .context("Could not determine data directory")?
+            .join("rs_watson")
+    };
     std::fs::create_dir_all(&data_dir)
         .with_context(|| format!("Could not create data directory: {}", data_dir.display()))?;
 
@@ -560,5 +564,90 @@ fn fmt_duration(d: Duration) -> String {
         format!("{}m {}s", m, s)
     } else {
         format!("{}s", s)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use config::{BehaviorConfig, StorageConfig, StorageProvider};
+
+    fn cfg(allow_future: bool) -> Config {
+        Config {
+            storage: StorageConfig { provider: StorageProvider::Json },
+            behavior: BehaviorConfig { allow_future_times: allow_future },
+        }
+    }
+
+    // --- fmt_duration ---
+
+    #[test]
+    fn fmt_duration_seconds_only() {
+        assert_eq!(fmt_duration(Duration::seconds(45)), "45s");
+    }
+
+    #[test]
+    fn fmt_duration_zero() {
+        assert_eq!(fmt_duration(Duration::zero()), "0s");
+    }
+
+    #[test]
+    fn fmt_duration_negative_treated_as_zero() {
+        assert_eq!(fmt_duration(Duration::seconds(-10)), "0s");
+    }
+
+    #[test]
+    fn fmt_duration_minutes_and_seconds() {
+        assert_eq!(fmt_duration(Duration::seconds(125)), "2m 5s");
+    }
+
+    #[test]
+    fn fmt_duration_hours_minutes_seconds() {
+        assert_eq!(fmt_duration(Duration::seconds(3723)), "1h 2m 3s");
+    }
+
+    #[test]
+    fn fmt_duration_exact_hour() {
+        assert_eq!(fmt_duration(Duration::hours(2)), "2h 0m 0s");
+    }
+
+    // --- parse_at ---
+
+    #[test]
+    fn parse_at_rejects_invalid_format() {
+        assert!(parse_at("25:00").is_err());
+        assert!(parse_at("abc").is_err());
+        assert!(parse_at("").is_err());
+    }
+
+    #[test]
+    fn parse_at_accepts_hhmm() {
+        assert!(parse_at("08:30").is_ok());
+    }
+
+    #[test]
+    fn parse_at_accepts_hhmmss() {
+        assert!(parse_at("08:30:00").is_ok());
+    }
+
+    // --- check_future ---
+
+    #[test]
+    fn check_future_past_time_always_ok() {
+        let past = Utc::now() - Duration::hours(1);
+        assert!(check_future(past, &cfg(false)).is_ok());
+        assert!(check_future(past, &cfg(true)).is_ok());
+    }
+
+    #[test]
+    fn check_future_future_time_rejected_by_default() {
+        let future = Utc::now() + Duration::hours(1);
+        assert!(check_future(future, &cfg(false)).is_err());
+    }
+
+    #[test]
+    fn check_future_future_time_allowed_when_configured() {
+        let future = Utc::now() + Duration::hours(1);
+        assert!(check_future(future, &cfg(true)).is_ok());
     }
 }
