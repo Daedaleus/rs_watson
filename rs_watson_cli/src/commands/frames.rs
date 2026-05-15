@@ -7,7 +7,10 @@ use rs_watson_storage::Storage;
 
 use crate::config::Config;
 use crate::epic::print_epic_report;
-use crate::format::{fmt_duration, fmt_tags, fmt_time, print_frames_grouped, print_report_grouped};
+use crate::format::{
+    fmt_duration, fmt_tags, fmt_time, print_frame_summary, print_frames_grouped,
+    print_report_grouped,
+};
 use crate::time_utils::{check_future, parse_at, prompt_time};
 
 use super::{apply_date_filter, w_err};
@@ -104,22 +107,7 @@ pub(super) fn cmd_add<S: Storage<Error: std::error::Error + Send + Sync + 'stati
     check_future(start, config)?;
     check_future(end, config)?;
     let frame = watson.add(&project, tags, start, end).map_err(w_err)?;
-    println!(
-        "{} {}{}",
-        "Added   ".green().bold(),
-        frame.project.yellow().bold(),
-        fmt_tags(&frame.tags),
-    );
-    println!(
-        "  {}  {}  {}",
-        fmt_time(frame.start).bright_white(),
-        "→".white(),
-        fmt_time(frame.end).bright_white(),
-    );
-    println!(
-        "  {}",
-        fmt_duration(frame.end - frame.start).magenta().bold()
-    );
+    print_frame_summary("Added   ".green().bold(), &frame);
     Ok(())
 }
 
@@ -170,22 +158,7 @@ pub(super) fn cmd_edit<S: Storage<Error: std::error::Error + Send + Sync + 'stat
         .map_err(w_err)?;
 
     println!();
-    println!(
-        "{} {}{}",
-        "Updated ".green().bold(),
-        updated.project.yellow().bold(),
-        fmt_tags(&updated.tags),
-    );
-    println!(
-        "  {}  {}  {}",
-        fmt_time(updated.start).bright_white(),
-        "→".white(),
-        fmt_time(updated.end).bright_white(),
-    );
-    println!(
-        "  {}",
-        fmt_duration(updated.end - updated.start).magenta().bold()
-    );
+    print_frame_summary("Updated ".green().bold(), &updated);
     Ok(())
 }
 

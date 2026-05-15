@@ -71,6 +71,46 @@ pub(crate) fn print_frames_grouped(frames: &[Frame]) {
     }
 }
 
+/// Prints the standard 3-line summary for a completed frame:
+/// `<header> <project> [tags]`, times, and duration.
+pub(crate) fn print_frame_summary(header: impl std::fmt::Display, frame: &Frame) {
+    println!(
+        "{} {}{}",
+        header,
+        frame.project.yellow().bold(),
+        fmt_tags(&frame.tags),
+    );
+    println!(
+        "  {}  {}  {}",
+        fmt_time(frame.start).bright_white(),
+        "→".white(),
+        fmt_time(frame.end).bright_white(),
+    );
+    println!(
+        "  {}",
+        fmt_duration(frame.end - frame.start).magenta().bold()
+    );
+}
+
+/// Prints an aggregated project/tag breakdown from a report.
+/// Shared by `print_report_grouped` and the epic report.
+pub(crate) fn print_project_breakdown(report: &Report) {
+    for project in &report.projects {
+        println!(
+            "  {}  {}",
+            format!("{:<20}", project.name).yellow().bold(),
+            fmt_duration(project.total).magenta().bold(),
+        );
+        for tag in &project.tags {
+            println!(
+                "    {}  {}",
+                format!("{:<18}", tag.name).cyan(),
+                fmt_duration(tag.total).magenta(),
+            );
+        }
+    }
+}
+
 /// Prints frames as an aggregated report grouped by day (used by `today` and `report`).
 /// Shows grand total when `show_total` is true and there is more than one day.
 pub(crate) fn print_report_grouped(frames: &[Frame], show_total: bool) {
@@ -81,7 +121,7 @@ pub(crate) fn print_report_grouped(frames: &[Frame], show_total: bool) {
         .fold(Duration::zero(), |acc, f| acc + (f.end - f.start));
 
     for (date, day_frames) in &by_day {
-        let owned: Vec<Frame> = day_frames.iter().map(|f| (*f).clone()).collect();
+        let owned: Vec<Frame> = day_frames.iter().copied().cloned().collect();
         let report = Report::from_frames(&owned);
 
         println!(
@@ -91,20 +131,7 @@ pub(crate) fn print_report_grouped(frames: &[Frame], show_total: bool) {
         );
         println!();
 
-        for project in &report.projects {
-            println!(
-                "  {}  {}",
-                format!("{:<20}", project.name).yellow().bold(),
-                fmt_duration(project.total).magenta().bold(),
-            );
-            for tag in &project.tags {
-                println!(
-                    "    {}  {}",
-                    format!("{:<18}", tag.name).cyan(),
-                    fmt_duration(tag.total).magenta(),
-                );
-            }
-        }
+        print_project_breakdown(&report);
         println!();
     }
 

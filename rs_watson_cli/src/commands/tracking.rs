@@ -5,7 +5,7 @@ use rs_watson::Watson;
 use rs_watson_storage::Storage;
 
 use crate::config::Config;
-use crate::format::{fmt_duration, fmt_tags, fmt_time};
+use crate::format::{fmt_duration, fmt_tags, fmt_time, print_frame_summary};
 use crate::time_utils::{check_future, parse_at};
 use rs_watson::StartResult;
 
@@ -28,22 +28,7 @@ pub(super) fn cmd_start<S: Storage<Error: std::error::Error + Send + Sync + 'sta
         .map_err(w_err)?;
 
     if let Some(stopped) = replaced {
-        println!(
-            "{} {}{}",
-            "Stopped ".red().bold(),
-            stopped.project.yellow().bold(),
-            fmt_tags(&stopped.tags),
-        );
-        println!(
-            "  {}  {}  {}",
-            fmt_time(stopped.start).bright_white(),
-            "→".white(),
-            fmt_time(stopped.end).bright_white(),
-        );
-        println!(
-            "  {}",
-            fmt_duration(stopped.end - stopped.start).magenta().bold()
-        );
+        print_frame_summary("Stopped ".red().bold(), &stopped);
         println!();
     }
 
@@ -68,22 +53,7 @@ pub(super) fn cmd_stop<S: Storage<Error: std::error::Error + Send + Sync + 'stat
         .unwrap_or_else(Utc::now);
     check_future(time, config)?;
     let frame = watson.stop(time).map_err(w_err)?;
-    println!(
-        "{} {}{}",
-        "Stopped ".red().bold(),
-        frame.project.yellow().bold(),
-        fmt_tags(&frame.tags),
-    );
-    println!(
-        "  {}  {}  {}",
-        fmt_time(frame.start).bright_white(),
-        "→".white(),
-        fmt_time(frame.end).bright_white(),
-    );
-    println!(
-        "  {}",
-        fmt_duration(frame.end - frame.start).magenta().bold()
-    );
+    print_frame_summary("Stopped ".red().bold(), &frame);
     Ok(())
 }
 
