@@ -46,7 +46,7 @@ pub(crate) fn parse_at(input: &str) -> Result<DateTime<Utc>> {
     }
 
     // "today HH:MM[:SS]" / "yesterday HH:MM[:SS]"
-    if let Some(dt) = parse_relative_datetime(s)? {
+    if let Some(dt) = parse_relative_datetime(s) {
         return Ok(dt);
     }
 
@@ -67,27 +67,22 @@ fn local_naive_to_utc(naive: NaiveDateTime) -> Result<DateTime<Utc>> {
         .context("Ambiguous datetime (DST transition)")
 }
 
-fn parse_relative_datetime(input: &str) -> Result<Option<DateTime<Utc>>> {
-    let (word, time_str) = match input.split_once(' ') {
-        Some(p) => p,
-        None => return Ok(None),
-    };
+fn parse_relative_datetime(input: &str) -> Option<DateTime<Utc>> {
+    let (word, time_str) = input.split_once(' ')?;
 
     let today = Local::now().date_naive();
     let date = match word.to_lowercase().as_str() {
         "today" => today,
         "yesterday" => today - Duration::days(1),
-        _ => return Ok(None),
+        _ => return None,
     };
 
     let time = NaiveTime::parse_from_str(time_str.trim(), "%H:%M:%S")
         .or_else(|_| NaiveTime::parse_from_str(time_str.trim(), "%H:%M"))
-        .ok();
+        .ok()?;
 
-    match time {
-        Some(t) => Ok(Some(local_naive_to_utc(date.and_time(t))?)),
-        None => Ok(None),
-    }
+    // DST ambiguity is silently ignored — caller falls through to other formats.
+    local_naive_to_utc(date.and_time(time)).ok()
 }
 
 /// Prompts for a datetime value in local time. Pre-filled with the full date+time of `default`.
