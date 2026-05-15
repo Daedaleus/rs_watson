@@ -83,6 +83,7 @@ mod tests {
         Config {
             storage: StorageConfig {
                 provider: StorageProvider::Json,
+                data_dir: None,
             },
             behavior: BehaviorConfig {
                 allow_future_times: allow_future,

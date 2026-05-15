@@ -50,6 +50,9 @@ pub(crate) enum Commands {
         /// Show only the last N frames
         #[arg(long, value_name = "N")]
         limit: Option<usize>,
+        /// Skip the last N frames (combine with --limit for pagination)
+        #[arg(long, value_name = "N")]
+        offset: Option<usize>,
     },
     /// Show aggregated report for today
     Today,
@@ -249,12 +252,17 @@ where
             }
         }
 
-        Commands::Log { from, to, limit } => {
+        Commands::Log {
+            from,
+            to,
+            limit,
+            offset,
+        } => {
             let mut frames = apply_date_filter(watson.log().map_err(w_err)?, from, to)?;
-            if let Some(n) = limit {
-                let skip = frames.len().saturating_sub(n);
-                frames = frames.into_iter().skip(skip).collect();
-            }
+            let total = frames.len();
+            let end = total.saturating_sub(offset.unwrap_or(0));
+            let start = end.saturating_sub(limit.unwrap_or(total));
+            frames = frames[start..end].to_vec();
             if frames.is_empty() {
                 println!("{}", "No frames recorded.".bright_black());
             } else {
@@ -653,7 +661,10 @@ pub(crate) fn cmd_init() -> Result<()> {
         .interact()?;
 
     let config = Config {
-        storage: StorageConfig { provider },
+        storage: StorageConfig {
+            provider,
+            data_dir: None,
+        },
         behavior: BehaviorConfig { allow_future_times },
     };
 

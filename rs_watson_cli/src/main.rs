@@ -45,6 +45,8 @@ fn run() -> Result<()> {
 
     let data_dir = if let Ok(dir) = std::env::var("RS_WATSON_DATA_DIR") {
         std::path::PathBuf::from(dir)
+    } else if let Some(dir) = &config.storage.data_dir {
+        std::path::PathBuf::from(dir)
     } else {
         dirs::data_dir()
             .context("Could not determine data directory")?

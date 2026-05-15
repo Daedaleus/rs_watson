@@ -14,6 +14,9 @@ pub struct Config {
 #[derive(Debug, Deserialize, Serialize)]
 pub struct StorageConfig {
     pub provider: StorageProvider,
+    /// Custom data directory. Overridden by RS_WATSON_DATA_DIR env var.
+    #[serde(default)]
+    pub data_dir: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, Copy)]
@@ -27,6 +30,7 @@ impl Default for StorageConfig {
     fn default() -> Self {
         StorageConfig {
             provider: StorageProvider::Json,
+            data_dir: None,
         }
     }
 }

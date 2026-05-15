@@ -25,14 +25,22 @@ pub enum WatsonError<E: std::error::Error + 'static> {
 
 /// Returns the first record whose interval overlaps with [start, end).
 /// When `end` is None (open interval for `start`), checks if `start` falls inside a frame.
+/// Returns the first record that overlaps [start, end).
+/// `exclude` skips a specific frame by ID — used when editing an existing frame.
 fn find_overlap(
     start: DateTime<Utc>,
     end: Option<DateTime<Utc>>,
     records: &[FrameRecord],
+    exclude: Option<Uuid>,
 ) -> Option<&FrameRecord> {
-    records.iter().find(|r| match end {
-        Some(e) => start < r.end && r.start < e,
-        None => start >= r.start && start < r.end,
+    records.iter().find(|r| {
+        if exclude.is_some_and(|id| r.id == id) {
+            return false;
+        }
+        match end {
+            Some(e) => start < r.end && r.start < e,
+            None => start >= r.start && start < r.end,
+        }
     })
 }
 
@@ -110,7 +118,7 @@ impl<S: Storage> Watson<S> {
             return Err(WatsonError::InvalidTimeRange);
         }
         let mut records = self.storage.load_frames().map_err(WatsonError::Storage)?;
-        if let Some(conflict) = find_overlap(start, Some(end), &records) {
+        if let Some(conflict) = find_overlap(start, Some(end), &records, None) {
             return Err(WatsonError::OverlappingFrame(conflict.project.clone()));
         }
         let frame = Frame::new(project, tags, start, end);
@@ -134,6 +142,9 @@ impl<S: Storage> Watson<S> {
             .iter()
             .position(|r| r.id == id)
             .ok_or(WatsonError::FrameNotFound)?;
+        if let Some(conflict) = find_overlap(start, Some(end), &records, Some(id)) {
+            return Err(WatsonError::OverlappingFrame(conflict.project.clone()));
+        }
         let frame = Frame {
             id,
             project: project.into(),
@@ -216,6 +227,9 @@ impl<S: Storage> Watson<S> {
         let frame = ActiveFrame::from(active).stop(at);
 
         let mut frames = self.storage.load_frames().map_err(WatsonError::Storage)?;
+        if let Some(conflict) = find_overlap(frame.start, Some(frame.end), &frames, None) {
+            return Err(WatsonError::OverlappingFrame(conflict.project.clone()));
+        }
         frames.push(FrameRecord::from(&frame));
         self.storage
             .save_frames(&frames)
@@ -252,7 +266,7 @@ impl<S: Storage> Watson<S> {
             return Err(WatsonError::AlreadyTracking(active.project));
         }
         let records = self.storage.load_frames().map_err(WatsonError::Storage)?;
-        if let Some(conflict) = find_overlap(at, None, &records) {
+        if let Some(conflict) = find_overlap(at, None, &records, None) {
             return Err(WatsonError::OverlappingFrame(conflict.project.clone()));
         }
         let frame = ActiveFrame::new(project, tags, at);
@@ -456,6 +470,38 @@ mod tests {
         let w = w();
         w.add("backend", vec![], t(9, 0), t(11, 0)).unwrap();
         let err = w.start("frontend", vec![], t(10, 0)).unwrap_err();
+        assert!(matches!(err, WatsonError::OverlappingFrame(_)));
+    }
+
+    #[test]
+    fn edit_rejects_new_times_that_overlap_another_frame() {
+        let w = w();
+        let f1 = w.add("backend", vec![], t(9, 0), t(10, 0)).unwrap();
+        w.add("frontend", vec![], t(11, 0), t(12, 0)).unwrap();
+        let err = w
+            .edit(f1.id, "backend", vec![], t(9, 0), t(11, 30))
+            .unwrap_err();
+        assert!(matches!(err, WatsonError::OverlappingFrame(_)));
+    }
+
+    #[test]
+    fn edit_allows_keeping_same_times() {
+        let w = w();
+        let frame = w.add("backend", vec![], t(9, 0), t(10, 0)).unwrap();
+        // editing a frame with its own times should not trigger overlap with itself
+        assert!(
+            w.edit(frame.id, "backend-renamed", vec![], t(9, 0), t(10, 0))
+                .is_ok()
+        );
+    }
+
+    #[test]
+    fn stop_rejects_time_that_would_overlap_existing_frame() {
+        let w = w();
+        w.add("other", vec![], t(10, 0), t(11, 0)).unwrap();
+        w.start("backend", vec![], t(9, 0)).unwrap();
+        // stopping at 10:30 would create [9:00, 10:30] which overlaps [10:00, 11:00]
+        let err = w.stop(t(10, 30)).unwrap_err();
         assert!(matches!(err, WatsonError::OverlappingFrame(_)));
     }
 
