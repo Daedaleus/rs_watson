@@ -1,4 +1,5 @@
 pub mod json;
+pub mod sqlite;
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};

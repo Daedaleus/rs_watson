@@ -20,6 +20,7 @@ pub struct StorageConfig {
 #[serde(rename_all = "lowercase")]
 pub enum StorageProvider {
     Json,
+    Sqlite,
 }
 
 impl Default for StorageConfig {

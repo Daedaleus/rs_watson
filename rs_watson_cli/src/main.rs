@@ -12,6 +12,7 @@ use owo_colors::OwoColorize;
 use rs_watson::{Frame, Report, Watson};
 use rs_watson_storage::Storage;
 use rs_watson_storage::json::JsonStorage;
+use rs_watson_storage::sqlite::SqliteStorage;
 
 #[derive(Parser)]
 #[command(name = "watson", about = "Time tracking tool")]
@@ -102,6 +103,11 @@ fn run() -> Result<()> {
     match config.storage.provider {
         StorageProvider::Json => {
             dispatch(Watson::new(JsonStorage::new(&data_dir)), cli.command, &config)?;
+        }
+        StorageProvider::Sqlite => {
+            let storage = SqliteStorage::new(data_dir.join("watson.db"))
+                .context("Could not open SQLite database")?;
+            dispatch(Watson::new(storage), cli.command, &config)?;
         }
     }
 
@@ -449,10 +455,11 @@ fn cmd_init() -> Result<()> {
     // [storage]
     let provider_idx = Select::with_theme(&ColorfulTheme::default())
         .with_prompt("Storage provider")
-        .items(&["JSON"])
+        .items(&["JSON  (frames.json + state.json)", "SQLite  (watson.db)"])
         .default(0)
         .interact()?;
     let provider = match provider_idx {
+        1 => StorageProvider::Sqlite,
         _ => StorageProvider::Json,
     };
 
