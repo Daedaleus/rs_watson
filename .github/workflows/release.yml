@@ -31,12 +31,6 @@ jobs:
             ui_bin: rs_watson_ui
             archive_ext: tar.gz
 
-          - name: macos-x86_64
-            runner: macos-13
-            cli_bin: watson
-            ui_bin: rs_watson_ui
-            archive_ext: tar.gz
-
           - name: windows-x86_64
             runner: windows-latest
             cli_bin: watson.exe
