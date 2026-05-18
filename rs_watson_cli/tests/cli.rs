@@ -284,6 +284,50 @@ fn report_shows_project_totals() {
         .stdout(contains("2h"));
 }
 
+// --- active frame included in reports ---
+
+#[test]
+fn today_includes_active_frame() {
+    let dir = TempDir::new().unwrap();
+    watson(&dir)
+        .args(["start", "-p", "live"])
+        .assert()
+        .success();
+    watson(&dir)
+        .args(["today"])
+        .assert()
+        .success()
+        .stdout(contains("live"));
+}
+
+#[test]
+fn report_includes_active_frame() {
+    let dir = TempDir::new().unwrap();
+    watson(&dir)
+        .args(["start", "-p", "live"])
+        .assert()
+        .success();
+    watson(&dir)
+        .args(["report"])
+        .assert()
+        .success()
+        .stdout(contains("live"));
+}
+
+#[test]
+fn log_includes_active_frame() {
+    let dir = TempDir::new().unwrap();
+    watson(&dir)
+        .args(["start", "-p", "live"])
+        .assert()
+        .success();
+    watson(&dir)
+        .args(["log"])
+        .assert()
+        .success()
+        .stdout(contains("live"));
+}
+
 // --- date filters ---
 
 #[test]

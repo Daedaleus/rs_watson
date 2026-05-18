@@ -23,12 +23,30 @@ pub(super) fn cmd_log<S: Storage<Error: std::error::Error + Send + Sync + 'stati
     offset: Option<usize>,
     config: &Config,
 ) -> Result<()> {
+    use chrono::Utc;
+
     let mut frames = apply_date_filter(
         watson.log().map_err(w_err)?,
-        from,
-        to,
+        from.clone(),
+        to.clone(),
         config.behavior.week_start,
     )?;
+
+    // Append the active frame (snapped to now) if it falls in the date range.
+    if let Some(active) = watson.status().map_err(w_err)? {
+        let now = Utc::now();
+        let virtual_frame = active.stop(now);
+        let in_range = apply_date_filter(
+            vec![virtual_frame.clone()],
+            from,
+            to,
+            config.behavior.week_start,
+        )?;
+        if !in_range.is_empty() {
+            frames.push(virtual_frame);
+        }
+    }
+
     let effective_limit =
         limit.or_else(|| (config.log.default_limit > 0).then_some(config.log.default_limit));
     let total = frames.len();
@@ -48,13 +66,24 @@ pub(super) fn cmd_today<S: Storage<Error: std::error::Error + Send + Sync + 'sta
     epic: bool,
     config: &Config,
 ) -> Result<()> {
-    let today = Local::now().date_naive();
-    let frames: Vec<_> = watson
+    use chrono::Utc;
+
+    let now = Utc::now();
+    let today = now.with_timezone(&Local).date_naive();
+    let mut frames: Vec<_> = watson
         .log()
         .map_err(w_err)?
         .into_iter()
         .filter(|f| f.start.with_timezone(&Local).date_naive() == today)
         .collect();
+
+    // Include the active frame if it started today.
+    if let Some(active) = watson.status().map_err(w_err)?
+        && active.start.with_timezone(&Local).date_naive() == today
+    {
+        frames.push(active.stop(now));
+    }
+
     if frames.is_empty() {
         println!("{}", "No frames recorded today.".bright_black());
     } else if epic {
@@ -75,12 +104,30 @@ pub(super) fn cmd_report<S: Storage<Error: std::error::Error + Send + Sync + 'st
     epic: bool,
     config: &Config,
 ) -> Result<()> {
-    let frames = apply_date_filter(
+    use chrono::Utc;
+
+    let mut frames = apply_date_filter(
         watson.log().map_err(w_err)?,
-        from,
-        to,
+        from.clone(),
+        to.clone(),
         config.behavior.week_start,
     )?;
+
+    // Include the active frame if it falls in the date range.
+    if let Some(active) = watson.status().map_err(w_err)? {
+        let now = Utc::now();
+        let virtual_frame = active.stop(now);
+        let in_range = apply_date_filter(
+            vec![virtual_frame.clone()],
+            from,
+            to,
+            config.behavior.week_start,
+        )?;
+        if !in_range.is_empty() {
+            frames.push(virtual_frame);
+        }
+    }
+
     if frames.is_empty() {
         println!("{}", "No frames recorded.".bright_black());
     } else if epic {
