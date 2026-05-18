@@ -775,7 +775,7 @@ fn report_epic_fails_without_configured_epics() {
     let cfg = TempDir::new().unwrap();
     std::fs::write(
         cfg.path().join("config.toml"),
-        "# no provider set — uses compiled-in default\n",
+        "[behavior]\nallow_future_times = true\n",
     )
     .unwrap();
 
