@@ -44,6 +44,8 @@ pub(crate) enum Commands {
     Cancel,
     /// Show what is currently being tracked
     Status,
+    /// Print a compact one-line status for use in statuslines / prompts
+    Statusline,
     /// List completed frames, grouped by day
     Log {
         /// Start date filter (YYYY-MM-DD or shortcuts: today, yesterday, week, month)
@@ -188,6 +190,7 @@ pub(crate) fn dispatch<S: Storage<Error: std::error::Error + Send + Sync + 'stat
         Commands::Stop { at } => tracking::cmd_stop(&watson, at, config),
         Commands::Cancel => tracking::cmd_cancel(&watson),
         Commands::Status => tracking::cmd_status(&watson),
+        Commands::Statusline => tracking::cmd_statusline(&watson),
         Commands::Log {
             from,
             to,

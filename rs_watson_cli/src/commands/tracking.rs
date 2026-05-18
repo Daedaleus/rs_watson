@@ -78,6 +78,22 @@ pub(super) fn cmd_cancel<S: Storage<Error: std::error::Error + Send + Sync + 'st
     Ok(())
 }
 
+pub(super) fn cmd_statusline<S: Storage<Error: std::error::Error + Send + Sync + 'static>>(
+    watson: &Watson<S>,
+) -> Result<()> {
+    match watson.status().map_err(w_err)? {
+        Some(frame) => {
+            if frame.tags.is_empty() {
+                println!("{}", frame.project);
+            } else {
+                println!("{} [{}]", frame.project, frame.tags.join(", "));
+            }
+        }
+        None => println!("No project started."),
+    }
+    Ok(())
+}
+
 pub(super) fn cmd_status<S: Storage<Error: std::error::Error + Send + Sync + 'static>>(
     watson: &Watson<S>,
 ) -> Result<()> {

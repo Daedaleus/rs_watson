@@ -31,6 +31,48 @@ fn status_when_idle_says_not_tracking() {
         .stdout(contains("Not tracking anything"));
 }
 
+// --- statusline ---
+
+#[test]
+fn statusline_when_idle_says_no_project() {
+    let dir = TempDir::new().unwrap();
+    watson(&dir)
+        .args(["statusline"])
+        .assert()
+        .success()
+        .stdout(contains("No project started."));
+}
+
+#[test]
+fn statusline_when_tracking_outputs_project() {
+    let dir = TempDir::new().unwrap();
+    watson(&dir)
+        .args(["start", "-p", "backend", "--at", "08:00"])
+        .assert()
+        .success();
+    watson(&dir)
+        .args(["statusline"])
+        .assert()
+        .success()
+        .stdout(predicates::str::is_match("^backend\n$").unwrap());
+}
+
+#[test]
+fn statusline_when_tracking_with_tags_outputs_project_and_tags() {
+    let dir = TempDir::new().unwrap();
+    watson(&dir)
+        .args([
+            "start", "-p", "backend", "-t", "api", "-t", "review", "--at", "08:00",
+        ])
+        .assert()
+        .success();
+    watson(&dir)
+        .args(["statusline"])
+        .assert()
+        .success()
+        .stdout(contains("backend [api, review]"));
+}
+
 // --- start / stop ---
 
 #[test]
