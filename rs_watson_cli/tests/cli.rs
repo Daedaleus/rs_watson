@@ -57,6 +57,50 @@ fn statusline_when_tracking_outputs_project_and_elapsed_time() {
         .stdout(predicates::str::is_match("^backend [0-9]+:[0-9]{2}\n$").unwrap());
 }
 
+#[test]
+fn statusline_includes_completed_frames_in_total() {
+    let data = TempDir::new().unwrap();
+    let cfg = TempDir::new().unwrap();
+    std::fs::write(
+        cfg.path().join("config.toml"),
+        "[behavior]\nallow_future_times = true\n",
+    )
+    .unwrap();
+
+    let run = |args: &[&str]| {
+        let mut c = assert_cmd::Command::cargo_bin("watson").unwrap();
+        c.env("RS_WATSON_DATA_DIR", data.path())
+            .env("RS_WATSON_CONFIG_DIR", cfg.path())
+            .args(args)
+            .assert()
+            .success();
+    };
+
+    run(&["add", "-p", "backend", "--from", "08:00", "--to", "09:00"]);
+    run(&["add", "-p", "backend", "--from", "09:00", "--to", "09:30"]);
+    run(&["start", "-p", "backend", "--at", "10:00"]);
+
+    let out = assert_cmd::Command::cargo_bin("watson")
+        .unwrap()
+        .env("RS_WATSON_DATA_DIR", data.path())
+        .env("RS_WATSON_CONFIG_DIR", cfg.path())
+        .args(["statusline"])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+
+    let line = String::from_utf8(out).unwrap();
+    let time_part = line.trim().split_whitespace().nth(1).unwrap();
+    let parts: Vec<u64> = time_part.split(':').map(|s| s.parse().unwrap()).collect();
+    let total_minutes = parts[0] * 60 + parts[1];
+    assert!(
+        total_minutes >= 90,
+        "expected >= 90 min, got {total_minutes}"
+    );
+}
+
 // --- start / stop ---
 
 #[test]
