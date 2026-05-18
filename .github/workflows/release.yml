@@ -65,8 +65,8 @@ jobs:
 
       # --- Package -----------------------------------------------------------
 
-      - name: Package (Linux / macOS)
-        if: matrix.archive_ext == 'tar.gz'
+      - name: Package (Linux)
+        if: runner.os == 'Linux'
         shell: bash
         run: |
           TAG="${GITHUB_REF_NAME}"
@@ -75,6 +75,21 @@ jobs:
             -C target/release \
             ${{ matrix.cli_bin }} \
             ${{ matrix.ui_bin }}
+          echo "ARCHIVE=${ARCHIVE}" >> "$GITHUB_ENV"
+
+      - name: Package (macOS — app bundle)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          ARCHIVE="rs-watson-${TAG}-${{ matrix.name }}.tar.gz"
+          mkdir -p rs_watson_ui.app/Contents/MacOS
+          cp target/release/rs_watson_ui rs_watson_ui.app/Contents/MacOS/rs_watson_ui
+          cp rs_watson_ui/Info.plist rs_watson_ui.app/Contents/Info.plist
+          mkdir staging
+          cp target/release/${{ matrix.cli_bin }} staging/
+          cp -r rs_watson_ui.app staging/
+          tar -czf "${ARCHIVE}" -C staging .
           echo "ARCHIVE=${ARCHIVE}" >> "$GITHUB_ENV"
 
       - name: Package (Windows)
