@@ -161,17 +161,18 @@ pub(super) fn cmd_add<S: Storage<Error: std::error::Error + Send + Sync + 'stati
 pub(super) fn cmd_edit<S: Storage<Error: std::error::Error + Send + Sync + 'static>>(
     watson: &Watson<S>,
 ) -> Result<()> {
-    let frames = watson.log().map_err(w_err)?;
+    let mut frames = watson.log().map_err(w_err)?;
     if frames.is_empty() {
         println!("{}", "No frames to edit.".bright_black());
         return Ok(());
     }
+    frames.reverse();
 
     let items = frame_selector_items(&frames);
     let selection = Select::with_theme(&ColorfulTheme::default())
         .with_prompt("Select frame to edit")
         .items(&items)
-        .default(items.len() - 1)
+        .default(0)
         .interact()?;
 
     let frame = &frames[selection];
@@ -212,17 +213,18 @@ pub(super) fn cmd_edit<S: Storage<Error: std::error::Error + Send + Sync + 'stat
 pub(super) fn cmd_remove<S: Storage<Error: std::error::Error + Send + Sync + 'static>>(
     watson: &Watson<S>,
 ) -> Result<()> {
-    let frames = watson.log().map_err(w_err)?;
+    let mut frames = watson.log().map_err(w_err)?;
     if frames.is_empty() {
         println!("{}", "No frames to remove.".bright_black());
         return Ok(());
     }
+    frames.reverse();
 
     let items = frame_selector_items(&frames);
     let selection = Select::with_theme(&ColorfulTheme::default())
         .with_prompt("Select frame to remove")
         .items(&items)
-        .default(items.len() - 1)
+        .default(0)
         .interact()?;
 
     let frame = &frames[selection];
