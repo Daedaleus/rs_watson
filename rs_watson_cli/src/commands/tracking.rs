@@ -83,11 +83,11 @@ pub(super) fn cmd_statusline<S: Storage<Error: std::error::Error + Send + Sync +
 ) -> Result<()> {
     match watson.status().map_err(w_err)? {
         Some(frame) => {
-            if frame.tags.is_empty() {
-                println!("{}", frame.project);
-            } else {
-                println!("{} [{}]", frame.project, frame.tags.join(", "));
-            }
+            let elapsed = Utc::now() - frame.start;
+            let total = elapsed.num_seconds().max(0);
+            let h = total / 3600;
+            let m = (total % 3600) / 60;
+            println!("{} {:02}:{:02}", frame.project, h, m);
         }
         None => println!("No project started."),
     }

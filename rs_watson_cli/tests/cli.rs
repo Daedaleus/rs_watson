@@ -44,7 +44,7 @@ fn statusline_when_idle_says_no_project() {
 }
 
 #[test]
-fn statusline_when_tracking_outputs_project() {
+fn statusline_when_tracking_outputs_project_and_elapsed_time() {
     let dir = TempDir::new().unwrap();
     watson(&dir)
         .args(["start", "-p", "backend", "--at", "08:00"])
@@ -54,23 +54,7 @@ fn statusline_when_tracking_outputs_project() {
         .args(["statusline"])
         .assert()
         .success()
-        .stdout(predicates::str::is_match("^backend\n$").unwrap());
-}
-
-#[test]
-fn statusline_when_tracking_with_tags_outputs_project_and_tags() {
-    let dir = TempDir::new().unwrap();
-    watson(&dir)
-        .args([
-            "start", "-p", "backend", "-t", "api", "-t", "review", "--at", "08:00",
-        ])
-        .assert()
-        .success();
-    watson(&dir)
-        .args(["statusline"])
-        .assert()
-        .success()
-        .stdout(contains("backend [api, review]"));
+        .stdout(predicates::str::is_match("^backend [0-9]+:[0-9]{2}\n$").unwrap());
 }
 
 // --- start / stop ---
