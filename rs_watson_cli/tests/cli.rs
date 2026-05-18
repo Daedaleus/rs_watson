@@ -4,10 +4,14 @@ use predicates::str::contains;
 use tempfile::TempDir;
 
 fn watson(dir: &TempDir) -> Command {
+    // Write a default test config on first use so fixed clock times ("08:00" etc.)
+    // never fail the future-time guard regardless of when the test suite runs.
+    let cfg = dir.path().join("config.toml");
+    if !cfg.exists() {
+        std::fs::write(cfg, "[behavior]\nallow_future_times = true\n").unwrap();
+    }
     let mut cmd = Command::cargo_bin("watson").unwrap();
     cmd.env("RS_WATSON_DATA_DIR", dir.path());
-    // Point config dir at the same temp dir so the real ~/.config/rs_watson/config.toml
-    // is never read — tests are fully isolated and use compiled-in defaults.
     cmd.env("RS_WATSON_CONFIG_DIR", dir.path());
     cmd
 }
@@ -59,31 +63,21 @@ fn statusline_when_tracking_outputs_project_and_elapsed_time() {
 
 #[test]
 fn statusline_includes_completed_frames_in_total() {
-    let data = TempDir::new().unwrap();
-    let cfg = TempDir::new().unwrap();
-    std::fs::write(
-        cfg.path().join("config.toml"),
-        "[behavior]\nallow_future_times = true\n",
-    )
-    .unwrap();
+    let dir = TempDir::new().unwrap();
+    watson(&dir)
+        .args(["add", "-p", "backend", "--from", "08:00", "--to", "09:00"])
+        .assert()
+        .success();
+    watson(&dir)
+        .args(["add", "-p", "backend", "--from", "09:00", "--to", "09:30"])
+        .assert()
+        .success();
+    watson(&dir)
+        .args(["start", "-p", "backend", "--at", "10:00"])
+        .assert()
+        .success();
 
-    let run = |args: &[&str]| {
-        let mut c = assert_cmd::Command::cargo_bin("watson").unwrap();
-        c.env("RS_WATSON_DATA_DIR", data.path())
-            .env("RS_WATSON_CONFIG_DIR", cfg.path())
-            .args(args)
-            .assert()
-            .success();
-    };
-
-    run(&["add", "-p", "backend", "--from", "08:00", "--to", "09:00"]);
-    run(&["add", "-p", "backend", "--from", "09:00", "--to", "09:30"]);
-    run(&["start", "-p", "backend", "--at", "10:00"]);
-
-    let out = assert_cmd::Command::cargo_bin("watson")
-        .unwrap()
-        .env("RS_WATSON_DATA_DIR", data.path())
-        .env("RS_WATSON_CONFIG_DIR", cfg.path())
+    let out = watson(&dir)
         .args(["statusline"])
         .assert()
         .success()
@@ -686,6 +680,9 @@ fn import_dry_run_shows_preview_without_saving() {
 // --- epics ---
 
 const EPIC_CONFIG: &str = r#"
+[behavior]
+allow_future_times = true
+
 [[epics]]
 name = "Backend Work"
 project = "backend"
