@@ -562,8 +562,8 @@ fn import_watson_format() {
     std::fs::write(
         &watson_file,
         r#"[
-            ["abc123", 1620000000, 1620003600, "imported-project", 1620003600, ["tag1"]],
-            ["def456", 1620100000, 1620103600, "other-project",    1620103600, []]
+            [1620000000, 1620003600, "imported-project", "abc123", ["tag1"], 1620003600],
+            [1620100000, 1620103600, "other-project",    "def456", [],       1620103600]
         ]"#,
     )
     .unwrap();
@@ -589,7 +589,7 @@ fn import_dry_run_shows_preview_without_saving() {
     let watson_file = dir.path().join("watson_frames");
     std::fs::write(
         &watson_file,
-        r#"[["abc", 1620000000, 1620003600, "preview-project", 1620003600, []]]"#,
+        r#"[[1620000000, 1620003600, "preview-project", "abc", [], 1620003600]]"#,
     )
     .unwrap();
 

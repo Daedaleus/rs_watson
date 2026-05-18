@@ -118,7 +118,7 @@ pub(super) fn cmd_import<S: Storage<Error: std::error::Error + Send + Sync + 'st
 }
 
 /// Parses the original Watson frames file format.
-/// Each frame is stored as: [id, start_ts, stop_ts, project, updated_ts, [tags]]
+/// Each frame is stored as: [start_ts, stop_ts, project, id, [tags], updated_ts]
 fn parse_watson_frames(content: &str) -> Result<Vec<rs_watson::Frame>> {
     use chrono::Utc;
 
@@ -130,15 +130,15 @@ fn parse_watson_frames(content: &str) -> Result<Vec<rs_watson::Frame>> {
         .map(|(i, entry)| {
             let ctx = || format!("Frame #{i}");
             let arr = entry.as_array().with_context(ctx)?;
-            let start_ts = arr.get(1).and_then(|v| v.as_i64()).with_context(ctx)?;
-            let stop_ts = arr.get(2).and_then(|v| v.as_i64()).with_context(ctx)?;
+            let start_ts = arr.first().and_then(|v| v.as_i64()).with_context(ctx)?;
+            let stop_ts = arr.get(1).and_then(|v| v.as_i64()).with_context(ctx)?;
             let project = arr
-                .get(3)
+                .get(2)
                 .and_then(|v| v.as_str())
                 .with_context(ctx)?
                 .to_string();
             let tags: Vec<String> = arr
-                .get(5)
+                .get(4)
                 .and_then(|v| v.as_array())
                 .map(|a| {
                     a.iter()
