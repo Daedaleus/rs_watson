@@ -104,8 +104,8 @@ pub(crate) fn print_project_breakdown(report: &Report) {
         for tag in &project.tags {
             println!(
                 "    {}  {}",
-                format!("{:<18}", tag.name).cyan(),
-                fmt_duration(tag.total).magenta(),
+                format!("{:<18}", tag.name).bright_black(),
+                fmt_duration(tag.total).bright_black(),
             );
         }
     }
