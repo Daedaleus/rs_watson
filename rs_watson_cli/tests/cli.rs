@@ -4,10 +4,14 @@ use predicates::str::contains;
 use tempfile::TempDir;
 
 fn watson(dir: &TempDir) -> Command {
+    // Write a default test config on first use so fixed clock times ("08:00" etc.)
+    // never fail the future-time guard regardless of when the test suite runs.
+    let cfg = dir.path().join("config.toml");
+    if !cfg.exists() {
+        std::fs::write(cfg, "[behavior]\nallow_future_times = true\n").unwrap();
+    }
     let mut cmd = Command::cargo_bin("watson").unwrap();
     cmd.env("RS_WATSON_DATA_DIR", dir.path());
-    // Point config dir at the same temp dir so the real ~/.config/rs_watson/config.toml
-    // is never read — tests are fully isolated and use compiled-in defaults.
     cmd.env("RS_WATSON_CONFIG_DIR", dir.path());
     cmd
 }
@@ -29,6 +33,66 @@ fn status_when_idle_says_not_tracking() {
         .assert()
         .success()
         .stdout(contains("Not tracking anything"));
+}
+
+// --- statusline ---
+
+#[test]
+fn statusline_when_idle_says_no_project() {
+    let dir = TempDir::new().unwrap();
+    watson(&dir)
+        .args(["statusline"])
+        .assert()
+        .success()
+        .stdout(contains("No project started."));
+}
+
+#[test]
+fn statusline_when_tracking_outputs_project_and_elapsed_time() {
+    let dir = TempDir::new().unwrap();
+    watson(&dir)
+        .args(["start", "-p", "backend", "--at", "08:00"])
+        .assert()
+        .success();
+    watson(&dir)
+        .args(["statusline"])
+        .assert()
+        .success()
+        .stdout(predicates::str::is_match("^backend [0-9]+:[0-9]{2}\n$").unwrap());
+}
+
+#[test]
+fn statusline_includes_completed_frames_in_total() {
+    let dir = TempDir::new().unwrap();
+    watson(&dir)
+        .args(["add", "-p", "backend", "--from", "08:00", "--to", "09:00"])
+        .assert()
+        .success();
+    watson(&dir)
+        .args(["add", "-p", "backend", "--from", "09:00", "--to", "09:30"])
+        .assert()
+        .success();
+    watson(&dir)
+        .args(["start", "-p", "backend", "--at", "10:00"])
+        .assert()
+        .success();
+
+    let out = watson(&dir)
+        .args(["statusline"])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+
+    let line = String::from_utf8(out).unwrap();
+    let time_part = line.trim().split_whitespace().nth(1).unwrap();
+    let parts: Vec<u64> = time_part.split(':').map(|s| s.parse().unwrap()).collect();
+    let total_minutes = parts[0] * 60 + parts[1];
+    assert!(
+        total_minutes >= 90,
+        "expected >= 90 min, got {total_minutes}"
+    );
 }
 
 // --- start / stop ---
@@ -562,8 +626,8 @@ fn import_watson_format() {
     std::fs::write(
         &watson_file,
         r#"[
-            ["abc123", 1620000000, 1620003600, "imported-project", 1620003600, ["tag1"]],
-            ["def456", 1620100000, 1620103600, "other-project",    1620103600, []]
+            [1620000000, 1620003600, "imported-project", "abc123", ["tag1"], 1620003600],
+            [1620100000, 1620103600, "other-project",    "def456", [],       1620103600]
         ]"#,
     )
     .unwrap();
@@ -589,7 +653,7 @@ fn import_dry_run_shows_preview_without_saving() {
     let watson_file = dir.path().join("watson_frames");
     std::fs::write(
         &watson_file,
-        r#"[["abc", 1620000000, 1620003600, "preview-project", 1620003600, []]]"#,
+        r#"[[1620000000, 1620003600, "preview-project", "abc", [], 1620003600]]"#,
     )
     .unwrap();
 
@@ -616,6 +680,9 @@ fn import_dry_run_shows_preview_without_saving() {
 // --- epics ---
 
 const EPIC_CONFIG: &str = r#"
+[behavior]
+allow_future_times = true
+
 [[epics]]
 name = "Backend Work"
 project = "backend"

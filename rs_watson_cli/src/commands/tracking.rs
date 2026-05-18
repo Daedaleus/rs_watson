@@ -78,6 +78,37 @@ pub(super) fn cmd_cancel<S: Storage<Error: std::error::Error + Send + Sync + 'st
     Ok(())
 }
 
+pub(super) fn cmd_statusline<S: Storage<Error: std::error::Error + Send + Sync + 'static>>(
+    watson: &Watson<S>,
+) -> Result<()> {
+    use chrono::Local;
+
+    let active = watson.status().map_err(w_err)?;
+    let Some(ref frame) = active else {
+        println!("No project started.");
+        return Ok(());
+    };
+
+    let now = Utc::now();
+    let today = now.with_timezone(&Local).date_naive();
+
+    let completed_today: i64 = watson
+        .log()
+        .map_err(w_err)?
+        .into_iter()
+        .filter(|f| f.start.with_timezone(&Local).date_naive() == today)
+        .map(|f| (f.end - f.start).num_seconds())
+        .sum();
+
+    let active_elapsed = (now - frame.start).num_seconds().max(0);
+    let total = completed_today + active_elapsed;
+    let h = total / 3600;
+    let m = (total % 3600) / 60;
+
+    println!("{} {:02}:{:02}", frame.project, h, m);
+    Ok(())
+}
+
 pub(super) fn cmd_status<S: Storage<Error: std::error::Error + Send + Sync + 'static>>(
     watson: &Watson<S>,
 ) -> Result<()> {
