@@ -82,10 +82,22 @@ jobs:
         shell: bash
         run: |
           TAG="${GITHUB_REF_NAME}"
+          VERSION="${TAG#v}"
           ARCHIVE="rs-watson-${TAG}-${{ matrix.name }}.tar.gz"
+
+          # Build the .app bundle
           mkdir -p rs_watson_ui.app/Contents/MacOS
           cp target/release/rs_watson_ui rs_watson_ui.app/Contents/MacOS/rs_watson_ui
-          cp rs_watson_ui/Info.plist rs_watson_ui.app/Contents/Info.plist
+
+          # Inject the real version into Info.plist
+          sed \
+            -e "s|<string>0.1.0</string>|<string>${VERSION}</string>|" \
+            rs_watson_ui/Info.plist > rs_watson_ui.app/Contents/Info.plist
+
+          # Ad-hoc sign so macOS shows "unidentified developer" (dismissible)
+          # instead of "damaged and can't be opened" (not dismissible).
+          codesign --force --deep --sign - rs_watson_ui.app
+
           mkdir staging
           cp target/release/${{ matrix.cli_bin }} staging/
           cp -r rs_watson_ui.app staging/
