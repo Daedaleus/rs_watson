@@ -160,6 +160,7 @@ pub(super) fn cmd_add<S: Storage<Error: std::error::Error + Send + Sync + 'stati
 
 pub(super) fn cmd_edit<S: Storage<Error: std::error::Error + Send + Sync + 'static>>(
     watson: &Watson<S>,
+    id: Option<String>,
 ) -> Result<()> {
     let mut frames = watson.log().map_err(w_err)?;
     if frames.is_empty() {
@@ -168,14 +169,19 @@ pub(super) fn cmd_edit<S: Storage<Error: std::error::Error + Send + Sync + 'stat
     }
     frames.reverse();
 
-    let items = frame_selector_items(&frames);
-    let selection = Select::with_theme(&ColorfulTheme::default())
-        .with_prompt("Select frame to edit")
-        .items(&items)
-        .default(0)
-        .interact()?;
-
-    let frame = &frames[selection];
+    let frame = if let Some(short) = id {
+        find_by_short_id(&frames, &short)?.clone()
+    } else {
+        let recent = recent_frames(&frames);
+        let items = frame_selector_items(recent);
+        let selection = Select::with_theme(&ColorfulTheme::default())
+            .with_prompt("Select frame to edit")
+            .items(&items)
+            .default(0)
+            .interact()?;
+        recent[selection].clone()
+    };
+    let frame = &frame;
     println!();
 
     let new_project: String = Input::with_theme(&ColorfulTheme::default())
@@ -212,6 +218,7 @@ pub(super) fn cmd_edit<S: Storage<Error: std::error::Error + Send + Sync + 'stat
 
 pub(super) fn cmd_remove<S: Storage<Error: std::error::Error + Send + Sync + 'static>>(
     watson: &Watson<S>,
+    id: Option<String>,
 ) -> Result<()> {
     let mut frames = watson.log().map_err(w_err)?;
     if frames.is_empty() {
@@ -220,14 +227,19 @@ pub(super) fn cmd_remove<S: Storage<Error: std::error::Error + Send + Sync + 'st
     }
     frames.reverse();
 
-    let items = frame_selector_items(&frames);
-    let selection = Select::with_theme(&ColorfulTheme::default())
-        .with_prompt("Select frame to remove")
-        .items(&items)
-        .default(0)
-        .interact()?;
-
-    let frame = &frames[selection];
+    let frame = if let Some(short) = id {
+        find_by_short_id(&frames, &short)?.clone()
+    } else {
+        let recent = recent_frames(&frames);
+        let items = frame_selector_items(recent);
+        let selection = Select::with_theme(&ColorfulTheme::default())
+            .with_prompt("Select frame to remove")
+            .items(&items)
+            .default(0)
+            .interact()?;
+        recent[selection].clone()
+    };
+    let frame = &frame;
     let confirmed = Confirm::with_theme(&ColorfulTheme::default())
         .with_prompt(format!(
             "Remove \"{}\" ({} → {})?",
@@ -253,13 +265,47 @@ pub(super) fn cmd_remove<S: Storage<Error: std::error::Error + Send + Sync + 'st
     Ok(())
 }
 
+/// How many frames the interactive selector shows (most recent first).
+const SELECTOR_LIMIT: usize = 25;
+
+/// Returns a short 8-character ID prefix for display.
+fn short_id(frame: &rs_watson::Frame) -> String {
+    frame.id.to_string().replace('-', "")[..8].to_string()
+}
+
+/// Returns the most recent up to SELECTOR_LIMIT frames (already in newest-first order).
+fn recent_frames(frames: &[rs_watson::Frame]) -> &[rs_watson::Frame] {
+    &frames[..frames.len().min(SELECTOR_LIMIT)]
+}
+
+/// Finds a frame by short ID prefix (case-insensitive). Errors if 0 or >1 match.
+fn find_by_short_id<'a>(
+    frames: &'a [rs_watson::Frame],
+    prefix: &str,
+) -> Result<&'a rs_watson::Frame> {
+    let lower = prefix.to_lowercase();
+    let matches: Vec<_> = frames
+        .iter()
+        .filter(|f| short_id(f).starts_with(&lower))
+        .collect();
+    match matches.len() {
+        0 => anyhow::bail!("No frame found with ID starting with \"{}\"", prefix),
+        1 => Ok(matches[0]),
+        _ => anyhow::bail!(
+            "Ambiguous ID \"{}\": {} frames match — use more characters",
+            prefix,
+            matches.len()
+        ),
+    }
+}
+
 /// Builds the display strings for the interactive frame selector used by edit and remove.
 fn frame_selector_items(frames: &[rs_watson::Frame]) -> Vec<String> {
     frames
         .iter()
         .map(|f| {
             format!(
-                "{}  {} → {}  {:<10}  {}{}",
+                "{}  {} → {}  {:<10}  {}{}  {}",
                 f.start.format("%Y-%m-%d"),
                 fmt_time(f.start),
                 fmt_time(f.end),
@@ -270,6 +316,7 @@ fn frame_selector_items(frames: &[rs_watson::Frame]) -> Vec<String> {
                 } else {
                     format!("  [{}]", f.tags.join(", "))
                 },
+                short_id(f),
             )
         })
         .collect()

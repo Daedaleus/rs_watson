@@ -57,14 +57,22 @@ pub(crate) fn print_frames_grouped(frames: &[Frame]) {
         );
 
         for frame in &day_frames {
+            let sid: String = frame
+                .id
+                .to_string()
+                .replace('-', "")
+                .chars()
+                .take(8)
+                .collect();
             println!(
-                "  {}  {}  {}   {:<12}  {}{}",
+                "  {}  {}  {}   {:<12}  {}{}  {}",
                 fmt_time(frame.start).bright_white(),
                 "→".white(),
                 fmt_time(frame.end).bright_white(),
                 fmt_duration(frame.end - frame.start).magenta().bold(),
                 frame.project.yellow().bold(),
                 fmt_tags(&frame.tags),
+                sid.bright_black(),
             );
         }
         println!();
