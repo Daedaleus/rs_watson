@@ -918,32 +918,51 @@ impl WatsonApp {
 fn render_project_report(ui: &mut egui::Ui, report: &Report, show_total: bool) {
     for project in &report.projects {
         ui.add_space(2.0);
-        ui.horizontal(|ui| {
-            ui.label(
-                egui::RichText::new(&project.name)
-                    .strong()
-                    .color(CLR_YELLOW),
-            );
-            ui.label(
-                egui::RichText::new(fmt_duration(project.total))
-                    .color(CLR_PURPLE)
-                    .strong(),
-            );
-        });
-        for tag in &project.tags {
+        if project.tags.is_empty() {
             ui.horizontal(|ui| {
-                ui.add_space(16.0);
                 ui.label(
-                    egui::RichText::new(format!("[{}]", tag.name))
-                        .color(CLR_CYAN)
-                        .small(),
+                    egui::RichText::new(&project.name)
+                        .strong()
+                        .color(CLR_YELLOW),
                 );
                 ui.label(
-                    egui::RichText::new(fmt_duration(tag.total))
+                    egui::RichText::new(fmt_duration(project.total))
                         .color(CLR_PURPLE)
-                        .small(),
+                        .strong(),
                 );
             });
+        } else {
+            let id = ui.make_persistent_id(&project.name);
+            egui::collapsing_header::CollapsingState::load_with_default_open(ui.ctx(), id, true)
+                .show_header(ui, |ui| {
+                    ui.label(
+                        egui::RichText::new(&project.name)
+                            .strong()
+                            .color(CLR_YELLOW),
+                    );
+                    ui.label(
+                        egui::RichText::new(fmt_duration(project.total))
+                            .color(CLR_PURPLE)
+                            .strong(),
+                    );
+                })
+                .body(|ui| {
+                    for tag in &project.tags {
+                        ui.horizontal(|ui| {
+                            ui.add_space(16.0);
+                            ui.label(
+                                egui::RichText::new(format!("[{}]", tag.name))
+                                    .color(CLR_CYAN)
+                                    .small(),
+                            );
+                            ui.label(
+                                egui::RichText::new(fmt_duration(tag.total))
+                                    .color(CLR_PURPLE)
+                                    .small(),
+                            );
+                        });
+                    }
+                });
         }
     }
     if show_total && report.projects.len() > 1 {
