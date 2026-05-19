@@ -13,12 +13,15 @@ use crate::format::{
 use crate::time_utils::{check_future, parse_at, prompt_time};
 use rs_watson::config::Config;
 
-use super::{apply_date_filter, w_err};
+use super::{apply_date_filter, apply_project_tag_filter, w_err};
 
+#[allow(clippy::too_many_arguments)]
 pub(super) fn cmd_log<S: Storage<Error: std::error::Error + Send + Sync + 'static>>(
     watson: &Watson<S>,
     from: Option<String>,
     to: Option<String>,
+    project: Option<String>,
+    tags: Vec<String>,
     limit: Option<usize>,
     offset: Option<usize>,
     config: &Config,
@@ -47,6 +50,8 @@ pub(super) fn cmd_log<S: Storage<Error: std::error::Error + Send + Sync + 'stati
         }
     }
 
+    let mut frames = apply_project_tag_filter(frames, project.as_deref(), &tags);
+
     let effective_limit =
         limit.or_else(|| (config.log.default_limit > 0).then_some(config.log.default_limit));
     let total = frames.len();
@@ -63,6 +68,8 @@ pub(super) fn cmd_log<S: Storage<Error: std::error::Error + Send + Sync + 'stati
 
 pub(super) fn cmd_today<S: Storage<Error: std::error::Error + Send + Sync + 'static>>(
     watson: &Watson<S>,
+    project: Option<String>,
+    tags: Vec<String>,
     epic: bool,
     config: &Config,
 ) -> Result<()> {
@@ -84,6 +91,8 @@ pub(super) fn cmd_today<S: Storage<Error: std::error::Error + Send + Sync + 'sta
         frames.push(active.stop(now));
     }
 
+    let frames = apply_project_tag_filter(frames, project.as_deref(), &tags);
+
     if frames.is_empty() {
         println!("{}", "No frames recorded today.".bright_black());
     } else if epic {
@@ -101,6 +110,8 @@ pub(super) fn cmd_report<S: Storage<Error: std::error::Error + Send + Sync + 'st
     watson: &Watson<S>,
     from: Option<String>,
     to: Option<String>,
+    project: Option<String>,
+    tags: Vec<String>,
     epic: bool,
     config: &Config,
 ) -> Result<()> {
@@ -127,6 +138,8 @@ pub(super) fn cmd_report<S: Storage<Error: std::error::Error + Send + Sync + 'st
             frames.push(virtual_frame);
         }
     }
+
+    let frames = apply_project_tag_filter(frames, project.as_deref(), &tags);
 
     if frames.is_empty() {
         println!("{}", "No frames recorded.".bright_black());

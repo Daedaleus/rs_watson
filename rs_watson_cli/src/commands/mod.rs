@@ -54,6 +54,12 @@ pub(crate) enum Commands {
         /// End date filter (YYYY-MM-DD or shortcuts: today, yesterday, week, month)
         #[arg(long, value_name = "DATE")]
         to: Option<String>,
+        /// Filter by project name (exact match)
+        #[arg(short = 'p', long, value_name = "PROJECT")]
+        project: Option<String>,
+        /// Filter by tag — can be given multiple times (all must match)
+        #[arg(short = 't', long = "tag", value_name = "TAG")]
+        tags: Vec<String>,
         /// Show only the last N frames
         #[arg(long, value_name = "N")]
         limit: Option<usize>,
@@ -63,6 +69,12 @@ pub(crate) enum Commands {
     },
     /// Show aggregated report for today
     Today {
+        /// Filter by project name (exact match)
+        #[arg(short = 'p', long, value_name = "PROJECT")]
+        project: Option<String>,
+        /// Filter by tag — can be given multiple times (all must match)
+        #[arg(short = 't', long = "tag", value_name = "TAG")]
+        tags: Vec<String>,
         /// Group by epic instead of project (requires epics in config.toml)
         #[arg(long)]
         epic: bool,
@@ -75,6 +87,12 @@ pub(crate) enum Commands {
         /// End date filter (YYYY-MM-DD or shortcuts: today, yesterday, week, month)
         #[arg(long, value_name = "DATE")]
         to: Option<String>,
+        /// Filter by project name (exact match)
+        #[arg(short = 'p', long, value_name = "PROJECT")]
+        project: Option<String>,
+        /// Filter by tag — can be given multiple times (all must match)
+        #[arg(short = 't', long = "tag", value_name = "TAG")]
+        tags: Vec<String>,
         /// Group by epic instead of project (requires epics in config.toml)
         #[arg(long)]
         epic: bool,
@@ -161,6 +179,19 @@ fn w_err<E: std::fmt::Display>(e: E) -> anyhow::Error {
     anyhow::anyhow!("{e}")
 }
 
+pub(super) fn apply_project_tag_filter(
+    frames: Vec<rs_watson::Frame>,
+    project: Option<&str>,
+    tags: &[String],
+) -> Vec<rs_watson::Frame> {
+    frames
+        .into_iter()
+        .filter(|f| {
+            project.is_none_or(|p| f.project == p) && tags.iter().all(|t| f.tags.contains(t))
+        })
+        .collect()
+}
+
 pub(super) fn apply_date_filter(
     frames: Vec<rs_watson::Frame>,
     from: Option<String>,
@@ -202,11 +233,23 @@ pub(crate) fn dispatch<S: Storage<Error: std::error::Error + Send + Sync + 'stat
         Commands::Log {
             from,
             to,
+            project,
+            tags,
             limit,
             offset,
-        } => frames::cmd_log(&watson, from, to, limit, offset, config),
-        Commands::Today { epic } => frames::cmd_today(&watson, epic, config),
-        Commands::Report { from, to, epic } => frames::cmd_report(&watson, from, to, epic, config),
+        } => frames::cmd_log(&watson, from, to, project, tags, limit, offset, config),
+        Commands::Today {
+            project,
+            tags,
+            epic,
+        } => frames::cmd_today(&watson, project, tags, epic, config),
+        Commands::Report {
+            from,
+            to,
+            project,
+            tags,
+            epic,
+        } => frames::cmd_report(&watson, from, to, project, tags, epic, config),
         Commands::Add {
             project,
             tags,
