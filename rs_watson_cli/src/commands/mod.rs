@@ -80,7 +80,11 @@ pub(crate) enum Commands {
         epic: bool,
     },
     /// Edit a recorded frame interactively
-    Edit,
+    Edit {
+        /// Short frame ID to edit directly, skipping the selector (e.g. "a1b2c3d4")
+        #[arg(value_name = "ID")]
+        id: Option<String>,
+    },
     /// Add a completed frame retroactively
     Add {
         /// Project name
@@ -97,7 +101,11 @@ pub(crate) enum Commands {
         to: String,
     },
     /// Remove a recorded frame interactively
-    Remove,
+    Remove {
+        /// Short frame ID to remove directly, skipping the selector (e.g. "a1b2c3d4")
+        #[arg(value_name = "ID")]
+        id: Option<String>,
+    },
     /// Rename a project across all recorded frames
     Rename {
         /// Current project name
@@ -205,8 +213,8 @@ pub(crate) fn dispatch<S: Storage<Error: std::error::Error + Send + Sync + 'stat
             from,
             to,
         } => frames::cmd_add(&watson, project, tags, from, to, config),
-        Commands::Edit => frames::cmd_edit(&watson),
-        Commands::Remove => frames::cmd_remove(&watson),
+        Commands::Edit { id } => frames::cmd_edit(&watson, id),
+        Commands::Remove { id } => frames::cmd_remove(&watson, id),
         Commands::Rename { from, to } => meta::cmd_rename(&watson, from, to),
         Commands::Projects => meta::cmd_projects(&watson),
         Commands::Tags => meta::cmd_tags(&watson),
