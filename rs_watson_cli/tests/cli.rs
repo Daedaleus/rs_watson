@@ -51,7 +51,7 @@ fn statusline_when_idle_says_no_project() {
 fn statusline_when_tracking_outputs_project_and_elapsed_time() {
     let dir = TempDir::new().unwrap();
     watson(&dir)
-        .args(["start", "-p", "backend", "--at", "08:00"])
+        .args(["start", "backend", "--at", "08:00"])
         .assert()
         .success();
     watson(&dir)
@@ -65,15 +65,15 @@ fn statusline_when_tracking_outputs_project_and_elapsed_time() {
 fn statusline_includes_completed_frames_in_total() {
     let dir = TempDir::new().unwrap();
     watson(&dir)
-        .args(["add", "-p", "backend", "--from", "08:00", "--to", "09:00"])
+        .args(["add", "backend", "--from", "08:00", "--to", "09:00"])
         .assert()
         .success();
     watson(&dir)
-        .args(["add", "-p", "backend", "--from", "09:00", "--to", "09:30"])
+        .args(["add", "backend", "--from", "09:00", "--to", "09:30"])
         .assert()
         .success();
     watson(&dir)
-        .args(["start", "-p", "backend", "--at", "10:00"])
+        .args(["start", "backend", "--at", "10:00"])
         .assert()
         .success();
 
@@ -101,7 +101,7 @@ fn statusline_includes_completed_frames_in_total() {
 fn start_outputs_project_name() {
     let dir = TempDir::new().unwrap();
     watson(&dir)
-        .args(["start", "-p", "backend", "--at", "08:00"])
+        .args(["start", "backend", "--at", "08:00"])
         .assert()
         .success()
         .stdout(contains("Starting"))
@@ -113,7 +113,7 @@ fn start_with_tags_outputs_tags() {
     let dir = TempDir::new().unwrap();
     watson(&dir)
         .args([
-            "start", "-p", "backend", "-t", "api", "-t", "auth", "--at", "08:00",
+            "start", "backend", "-t", "api", "-t", "auth", "--at", "08:00",
         ])
         .assert()
         .success()
@@ -124,11 +124,11 @@ fn start_with_tags_outputs_tags() {
 fn start_twice_auto_stops_first_and_starts_second() {
     let dir = TempDir::new().unwrap();
     watson(&dir)
-        .args(["start", "-p", "backend", "--at", "08:00"])
+        .args(["start", "backend", "--at", "08:00"])
         .assert()
         .success();
     watson(&dir)
-        .args(["start", "-p", "frontend", "--at", "08:30"])
+        .args(["start", "frontend", "--at", "08:30"])
         .assert()
         .success()
         .stdout(contains("Stopped"))
@@ -141,7 +141,7 @@ fn start_twice_auto_stops_first_and_starts_second() {
 fn stop_after_start_outputs_stopped() {
     let dir = TempDir::new().unwrap();
     watson(&dir)
-        .args(["start", "-p", "backend", "--at", "08:00"])
+        .args(["start", "backend", "--at", "08:00"])
         .assert()
         .success();
     watson(&dir)
@@ -168,7 +168,7 @@ fn stop_when_idle_fails() {
 fn cancel_after_start_clears_tracking() {
     let dir = TempDir::new().unwrap();
     watson(&dir)
-        .args(["start", "-p", "backend", "--at", "08:00"])
+        .args(["start", "backend", "--at", "08:00"])
         .assert()
         .success();
     watson(&dir)
@@ -202,7 +202,7 @@ fn add_creates_frame() {
     let dir = TempDir::new().unwrap();
     watson(&dir)
         .args([
-            "add", "-p", "meeting", "-t", "planning", "--from", "08:00", "--to", "09:30",
+            "add", "meeting", "-t", "planning", "--from", "08:00", "--to", "09:30",
         ])
         .assert()
         .success()
@@ -214,7 +214,7 @@ fn add_creates_frame() {
 fn add_rejects_inverted_range() {
     let dir = TempDir::new().unwrap();
     watson(&dir)
-        .args(["add", "-p", "meeting", "--from", "10:00", "--to", "09:00"])
+        .args(["add", "meeting", "--from", "10:00", "--to", "09:00"])
         .assert()
         .failure()
         .stderr(contains("End time must be after start time"));
@@ -226,7 +226,7 @@ fn add_rejects_inverted_range() {
 fn log_shows_added_frames() {
     let dir = TempDir::new().unwrap();
     watson(&dir)
-        .args(["add", "-p", "backend", "--from", "08:00", "--to", "09:00"])
+        .args(["add", "backend", "--from", "08:00", "--to", "09:00"])
         .assert()
         .success();
     watson(&dir)
@@ -250,15 +250,15 @@ fn log_when_empty_says_no_frames() {
 fn projects_lists_unique_project_names() {
     let dir = TempDir::new().unwrap();
     watson(&dir)
-        .args(["add", "-p", "backend", "--from", "08:00", "--to", "09:00"])
+        .args(["add", "backend", "--from", "08:00", "--to", "09:00"])
         .assert()
         .success();
     watson(&dir)
-        .args(["add", "-p", "frontend", "--from", "09:00", "--to", "10:00"])
+        .args(["add", "frontend", "--from", "09:00", "--to", "10:00"])
         .assert()
         .success();
     watson(&dir)
-        .args(["add", "-p", "backend", "--from", "10:00", "--to", "11:00"])
+        .args(["add", "backend", "--from", "10:00", "--to", "11:00"])
         .assert()
         .success();
     watson(&dir)
@@ -273,7 +273,7 @@ fn projects_lists_unique_project_names() {
 fn report_shows_project_totals() {
     let dir = TempDir::new().unwrap();
     watson(&dir)
-        .args(["add", "-p", "backend", "--from", "08:00", "--to", "10:00"])
+        .args(["add", "backend", "--from", "08:00", "--to", "10:00"])
         .assert()
         .success();
     watson(&dir)
@@ -289,10 +289,7 @@ fn report_shows_project_totals() {
 #[test]
 fn today_includes_active_frame() {
     let dir = TempDir::new().unwrap();
-    watson(&dir)
-        .args(["start", "-p", "live"])
-        .assert()
-        .success();
+    watson(&dir).args(["start", "live"]).assert().success();
     watson(&dir)
         .args(["today"])
         .assert()
@@ -303,10 +300,7 @@ fn today_includes_active_frame() {
 #[test]
 fn report_includes_active_frame() {
     let dir = TempDir::new().unwrap();
-    watson(&dir)
-        .args(["start", "-p", "live"])
-        .assert()
-        .success();
+    watson(&dir).args(["start", "live"]).assert().success();
     watson(&dir)
         .args(["report"])
         .assert()
@@ -317,10 +311,7 @@ fn report_includes_active_frame() {
 #[test]
 fn log_includes_active_frame() {
     let dir = TempDir::new().unwrap();
-    watson(&dir)
-        .args(["start", "-p", "live"])
-        .assert()
-        .success();
+    watson(&dir).args(["start", "live"]).assert().success();
     watson(&dir)
         .args(["log"])
         .assert()
@@ -334,11 +325,11 @@ fn log_includes_active_frame() {
 fn log_from_filter_excludes_older_frames() {
     let dir = TempDir::new().unwrap();
     watson(&dir)
-        .args(["add", "-p", "old", "--from", "08:00", "--to", "09:00"])
+        .args(["add", "old", "--from", "08:00", "--to", "09:00"])
         .assert()
         .success();
     watson(&dir)
-        .args(["add", "-p", "new", "--from", "10:00", "--to", "11:00"])
+        .args(["add", "new", "--from", "10:00", "--to", "11:00"])
         .assert()
         .success();
     // --from today should include both (same day), just verify it runs
@@ -354,7 +345,7 @@ fn log_from_filter_excludes_older_frames() {
 fn log_with_future_from_shows_no_frames() {
     let dir = TempDir::new().unwrap();
     watson(&dir)
-        .args(["add", "-p", "backend", "--from", "08:00", "--to", "09:00"])
+        .args(["add", "backend", "--from", "08:00", "--to", "09:00"])
         .assert()
         .success();
     watson(&dir)
@@ -368,7 +359,7 @@ fn log_with_future_from_shows_no_frames() {
 fn report_with_date_range_filters_frames() {
     let dir = TempDir::new().unwrap();
     watson(&dir)
-        .args(["add", "-p", "backend", "--from", "08:00", "--to", "10:00"])
+        .args(["add", "backend", "--from", "08:00", "--to", "10:00"])
         .assert()
         .success();
     watson(&dir)
@@ -384,7 +375,7 @@ fn report_with_date_range_filters_frames() {
 fn rename_updates_project_name() {
     let dir = TempDir::new().unwrap();
     watson(&dir)
-        .args(["add", "-p", "old-name", "--from", "08:00", "--to", "09:00"])
+        .args(["add", "old-name", "--from", "08:00", "--to", "09:00"])
         .assert()
         .success();
     watson(&dir)
@@ -419,7 +410,6 @@ fn add_with_explicit_past_date() {
     watson(&dir)
         .args([
             "add",
-            "-p",
             "backend",
             "--from",
             "2026-01-01 09:00",
@@ -440,7 +430,7 @@ fn add_with_explicit_past_date() {
 fn start_with_explicit_past_date() {
     let dir = TempDir::new().unwrap();
     watson(&dir)
-        .args(["start", "-p", "backend", "--at", "2026-01-01 09:00"])
+        .args(["start", "backend", "--at", "2026-01-01 09:00"])
         .assert()
         .success()
         .stdout(contains("Starting"));
@@ -457,7 +447,6 @@ fn add_with_yesterday_shortcut() {
     watson(&dir)
         .args([
             "add",
-            "-p",
             "retro",
             "--from",
             "yesterday 09:00",
@@ -480,11 +469,11 @@ fn add_with_yesterday_shortcut() {
 fn start_auto_stops_active_and_starts_new() {
     let dir = TempDir::new().unwrap();
     watson(&dir)
-        .args(["start", "-p", "old", "--at", "08:00"])
+        .args(["start", "old", "--at", "08:00"])
         .assert()
         .success();
     watson(&dir)
-        .args(["start", "-p", "new", "--at", "09:00"])
+        .args(["start", "new", "--at", "09:00"])
         .assert()
         .success()
         .stdout(contains("Stopped"))
@@ -509,11 +498,11 @@ fn start_auto_stops_active_and_starts_new() {
 fn start_auto_stop_rejects_at_before_active_start() {
     let dir = TempDir::new().unwrap();
     watson(&dir)
-        .args(["start", "-p", "old", "--at", "10:00"])
+        .args(["start", "old", "--at", "10:00"])
         .assert()
         .success();
     watson(&dir)
-        .args(["start", "-p", "new", "--at", "09:00"])
+        .args(["start", "new", "--at", "09:00"])
         .assert()
         .failure()
         .stderr(contains("End time must be after start time"));
@@ -525,11 +514,11 @@ fn start_auto_stop_rejects_at_before_active_start() {
 fn add_fails_when_frames_overlap() {
     let dir = TempDir::new().unwrap();
     watson(&dir)
-        .args(["add", "-p", "backend", "--from", "08:00", "--to", "10:00"])
+        .args(["add", "backend", "--from", "08:00", "--to", "10:00"])
         .assert()
         .success();
     watson(&dir)
-        .args(["add", "-p", "frontend", "--from", "09:00", "--to", "11:00"])
+        .args(["add", "frontend", "--from", "09:00", "--to", "11:00"])
         .assert()
         .failure()
         .stderr(contains("overlap"));
@@ -539,11 +528,11 @@ fn add_fails_when_frames_overlap() {
 fn start_fails_when_time_overlaps_existing_frame() {
     let dir = TempDir::new().unwrap();
     watson(&dir)
-        .args(["add", "-p", "backend", "--from", "08:00", "--to", "10:00"])
+        .args(["add", "backend", "--from", "08:00", "--to", "10:00"])
         .assert()
         .success();
     watson(&dir)
-        .args(["start", "-p", "frontend", "--at", "09:00"])
+        .args(["start", "frontend", "--at", "09:00"])
         .assert()
         .failure()
         .stderr(contains("overlap"));
@@ -553,11 +542,11 @@ fn start_fails_when_time_overlaps_existing_frame() {
 fn adjacent_frames_are_allowed() {
     let dir = TempDir::new().unwrap();
     watson(&dir)
-        .args(["add", "-p", "backend", "--from", "08:00", "--to", "09:00"])
+        .args(["add", "backend", "--from", "08:00", "--to", "09:00"])
         .assert()
         .success();
     watson(&dir)
-        .args(["add", "-p", "frontend", "--from", "09:00", "--to", "10:00"])
+        .args(["add", "frontend", "--from", "09:00", "--to", "10:00"])
         .assert()
         .success();
 }
@@ -568,15 +557,15 @@ fn adjacent_frames_are_allowed() {
 fn log_limit_shows_last_n_frames() {
     let dir = TempDir::new().unwrap();
     watson(&dir)
-        .args(["add", "-p", "first", "--from", "01:00", "--to", "01:30"])
+        .args(["add", "first", "--from", "01:00", "--to", "01:30"])
         .assert()
         .success();
     watson(&dir)
-        .args(["add", "-p", "second", "--from", "02:00", "--to", "02:30"])
+        .args(["add", "second", "--from", "02:00", "--to", "02:30"])
         .assert()
         .success();
     watson(&dir)
-        .args(["add", "-p", "third", "--from", "03:00", "--to", "03:30"])
+        .args(["add", "third", "--from", "03:00", "--to", "03:30"])
         .assert()
         .success();
     let out = watson(&dir).args(["log", "--limit", "2"]).output().unwrap();
@@ -593,7 +582,7 @@ fn tags_lists_all_used_tags() {
     let dir = TempDir::new().unwrap();
     watson(&dir)
         .args([
-            "add", "-p", "backend", "-t", "api", "-t", "auth", "--from", "08:00", "--to", "09:00",
+            "add", "backend", "-t", "api", "-t", "auth", "--from", "08:00", "--to", "09:00",
         ])
         .assert()
         .success();
@@ -612,7 +601,7 @@ fn export_csv_to_stdout_has_header_and_data() {
     let dir = TempDir::new().unwrap();
     watson(&dir)
         .args([
-            "add", "-p", "backend", "-t", "api", "--from", "08:00", "--to", "09:00",
+            "add", "backend", "-t", "api", "--from", "08:00", "--to", "09:00",
         ])
         .assert()
         .success();
@@ -630,7 +619,7 @@ fn export_csv_to_stdout_has_header_and_data() {
 fn export_csv_to_file() {
     let dir = TempDir::new().unwrap();
     watson(&dir)
-        .args(["add", "-p", "backend", "--from", "08:00", "--to", "09:00"])
+        .args(["add", "backend", "--from", "08:00", "--to", "09:00"])
         .assert()
         .success();
     let output_file = dir.path().join("export.csv");
@@ -650,7 +639,7 @@ fn export_csv_to_file() {
 fn export_timestamps_use_z_suffix() {
     let dir = TempDir::new().unwrap();
     watson(&dir)
-        .args(["add", "-p", "backend", "--from", "08:00", "--to", "09:00"])
+        .args(["add", "backend", "--from", "08:00", "--to", "09:00"])
         .assert()
         .success();
     watson(&dir)
@@ -777,12 +766,12 @@ fn report_epic_groups_by_epic() {
 
     watson_cfg(&data, &cfg)
         .args([
-            "add", "-p", "backend", "-t", "refactor", "--from", "08:00", "--to", "09:00",
+            "add", "backend", "-t", "refactor", "--from", "08:00", "--to", "09:00",
         ])
         .assert()
         .success();
     watson_cfg(&data, &cfg)
-        .args(["add", "-p", "backend", "--from", "09:00", "--to", "10:00"])
+        .args(["add", "backend", "--from", "09:00", "--to", "10:00"])
         .assert()
         .success();
 
@@ -801,7 +790,7 @@ fn report_epic_shows_unassigned_for_unmatched_frames() {
     std::fs::write(cfg.path().join("config.toml"), EPIC_CONFIG).unwrap();
 
     watson_cfg(&data, &cfg)
-        .args(["add", "-p", "frontend", "--from", "08:00", "--to", "09:00"])
+        .args(["add", "frontend", "--from", "08:00", "--to", "09:00"])
         .assert()
         .success();
 
@@ -824,7 +813,7 @@ fn report_epic_fails_without_configured_epics() {
     .unwrap();
 
     watson_cfg(&data, &cfg)
-        .args(["add", "-p", "backend", "--from", "08:00", "--to", "09:00"])
+        .args(["add", "backend", "--from", "08:00", "--to", "09:00"])
         .assert()
         .success();
 
@@ -841,7 +830,7 @@ fn report_epic_fails_without_configured_epics() {
 fn start_rejects_invalid_at_format() {
     let dir = TempDir::new().unwrap();
     watson(&dir)
-        .args(["start", "-p", "backend", "--at", "invalid"])
+        .args(["start", "backend", "--at", "invalid"])
         .assert()
         .failure()
         .stderr(contains("Invalid time"));

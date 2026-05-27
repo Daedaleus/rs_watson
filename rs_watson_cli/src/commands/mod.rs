@@ -25,7 +25,7 @@ pub(crate) enum Commands {
     /// Start tracking time on a project
     Start {
         /// Project name
-        #[arg(short = 'p', long)]
+        #[arg(value_name = "PROJECT")]
         project: String,
         /// Tags (can be specified multiple times)
         #[arg(short = 't', long = "tag")]
@@ -48,15 +48,15 @@ pub(crate) enum Commands {
     Statusline,
     /// List completed frames, grouped by day
     Log {
+        /// Filter by project name (exact match)
+        #[arg(value_name = "PROJECT")]
+        project: Option<String>,
         /// Start date filter (YYYY-MM-DD or shortcuts: today, yesterday, week, month)
         #[arg(long, value_name = "DATE")]
         from: Option<String>,
         /// End date filter (YYYY-MM-DD or shortcuts: today, yesterday, week, month)
         #[arg(long, value_name = "DATE")]
         to: Option<String>,
-        /// Filter by project name (exact match)
-        #[arg(short = 'p', long, value_name = "PROJECT")]
-        project: Option<String>,
         /// Filter by tag — can be given multiple times (all must match)
         #[arg(short = 't', long = "tag", value_name = "TAG")]
         tags: Vec<String>,
@@ -70,7 +70,7 @@ pub(crate) enum Commands {
     /// Show aggregated report for today
     Today {
         /// Filter by project name (exact match)
-        #[arg(short = 'p', long, value_name = "PROJECT")]
+        #[arg(value_name = "PROJECT")]
         project: Option<String>,
         /// Filter by tag — can be given multiple times (all must match)
         #[arg(short = 't', long = "tag", value_name = "TAG")]
@@ -81,15 +81,15 @@ pub(crate) enum Commands {
     },
     /// Show aggregated report for all recorded time
     Report {
+        /// Filter by project name (exact match)
+        #[arg(value_name = "PROJECT")]
+        project: Option<String>,
         /// Start date filter (YYYY-MM-DD or shortcuts: today, yesterday, week, month)
         #[arg(long, value_name = "DATE")]
         from: Option<String>,
         /// End date filter (YYYY-MM-DD or shortcuts: today, yesterday, week, month)
         #[arg(long, value_name = "DATE")]
         to: Option<String>,
-        /// Filter by project name (exact match)
-        #[arg(short = 'p', long, value_name = "PROJECT")]
-        project: Option<String>,
         /// Filter by tag — can be given multiple times (all must match)
         #[arg(short = 't', long = "tag", value_name = "TAG")]
         tags: Vec<String>,
@@ -106,7 +106,7 @@ pub(crate) enum Commands {
     /// Add a completed frame retroactively
     Add {
         /// Project name
-        #[arg(short = 'p', long)]
+        #[arg(value_name = "PROJECT")]
         project: String,
         /// Tags (can be specified multiple times)
         #[arg(short = 't', long = "tag")]
