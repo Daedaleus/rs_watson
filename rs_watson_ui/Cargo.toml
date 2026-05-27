@@ -1,6 +1,6 @@
 [package]
 name = "rs_watson_ui"
-version = "0.2.1"
+version = "0.3.0"
 edition = "2024"
 
 [dependencies]
@@ -8,6 +8,6 @@ anyhow = "1.0.102"
 chrono = "0.4.44"
 dirs = "6.0.0"
 eframe = "0.34.2"
-rs_watson = { version = "0.2.1", path = "../rs_watson", features = ["storage-sqlite"] }
-rs_watson_storage = { version = "0.2.1", path = "../rs_watson_storage", default-features = false }
+rs_watson = { version = "0.3.0", path = "../rs_watson", features = ["storage-sqlite"] }
+rs_watson_storage = { version = "0.3.0", path = "../rs_watson_storage", default-features = false }
 uuid = "1.23.1"

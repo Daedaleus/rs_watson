@@ -1,6 +1,6 @@
 [package]
 name = "rs_watson_storage"
-version = "0.2.1"
+version = "0.3.0"
 edition = "2024"
 
 [features]
