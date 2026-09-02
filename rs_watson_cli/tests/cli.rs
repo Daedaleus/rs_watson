@@ -1,3 +1,7 @@
+// Integration tests: `unwrap()` on setup helpers is fine here — the workspace
+// deny only targets production paths, and clippy.toml exempts only `#[test]` fns.
+#![allow(clippy::unwrap_used)]
+
 use assert_cmd::Command;
 use predicates::prelude::PredicateBooleanExt;
 use predicates::str::contains;
