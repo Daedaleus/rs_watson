@@ -4,6 +4,9 @@ version = "0.3.0"
 edition = "2024"
 
 [features]
+# Default so the crate builds standalone; consumers that pick their own
+# backend must set `default-features = false`.
+default = ["storage-sqlite"]
 storage-json = ["rs_watson_storage/json"]
 storage-sqlite = ["rs_watson_storage/sqlite"]
 
