@@ -22,7 +22,9 @@ pub(crate) fn parse_date(input: &str, week_start: WeekStart) -> Result<NaiveDate
             };
             Ok(today - Duration::days(days_back))
         }
-        "month" => Ok(today.with_day(1).expect("day 1 always valid")),
+        "month" => today
+            .with_day(1)
+            .context("failed to compute the first day of the current month"),
         s => NaiveDate::parse_from_str(s, "%Y-%m-%d").with_context(|| {
             format!("Invalid date \"{s}\", expected YYYY-MM-DD or: today, yesterday, week, month")
         }),

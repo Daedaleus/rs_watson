@@ -11,3 +11,6 @@ eframe = "0.34.2"
 rs_watson = { version = "0.3.0", path = "../rs_watson", default-features = false, features = ["storage-sqlite"] }
 rs_watson_storage = { version = "0.3.0", path = "../rs_watson_storage", default-features = false }
 uuid = "1.23.1"
+
+[lints]
+workspace = true

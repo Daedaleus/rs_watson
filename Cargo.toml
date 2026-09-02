@@ -13,3 +13,9 @@ lto = true         # fat LTO: cross-crate inlining and dead-code elimination
 codegen-units = 1  # single codegen unit — slower compile, better output
 strip = true       # strip debug symbols from the final binary
 panic = "abort"    # no unwinding machinery — smaller binary, faster panics
+
+[workspace.lints.clippy]
+# CLAUDE.md: no unwrap()/expect() in production code paths.
+# clippy.toml exempts test code so tests stay readable.
+unwrap_used = "deny"
+expect_used = "deny"

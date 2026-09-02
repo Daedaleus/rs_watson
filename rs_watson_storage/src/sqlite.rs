@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::path::Path;
-use std::sync::Mutex;
+use std::sync::{Mutex, MutexGuard};
 
 use chrono::{DateTime, Utc};
 use rusqlite::{Connection, params};
@@ -40,6 +40,18 @@ impl SqliteStorage {
             conn: Mutex::new(conn),
         })
     }
+
+    /// Locks the connection, recovering from a poisoned mutex instead of panicking.
+    ///
+    /// A panic while the guard is held cannot leave the `Connection` logically
+    /// inconsistent: an in-flight `Transaction` rolls back when it is dropped during
+    /// unwinding. Recovering is therefore preferable to propagating a panic — and the
+    /// release profile uses `panic = "abort"`, so poisoning can only occur in debug builds.
+    fn conn(&self) -> MutexGuard<'_, Connection> {
+        self.conn
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+    }
 }
 
 fn parse_dt(s: &str) -> Result<DateTime<Utc>, SqliteStorageError> {
@@ -56,7 +68,7 @@ impl Storage for SqliteStorage {
     type Error = SqliteStorageError;
 
     fn load_frames(&self) -> Result<Vec<FrameRecord>, Self::Error> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.conn();
 
         // Load frames ordered by start time
         let mut frame_stmt =
@@ -93,7 +105,7 @@ impl Storage for SqliteStorage {
     }
 
     fn save_frames(&self, frames: &[FrameRecord]) -> Result<(), Self::Error> {
-        let mut conn = self.conn.lock().unwrap();
+        let mut conn = self.conn();
         let tx = conn.transaction()?;
 
         tx.execute("DELETE FROM frames", [])?; // CASCADE removes frame_tags
@@ -121,7 +133,7 @@ impl Storage for SqliteStorage {
     }
 
     fn load_active(&self) -> Result<Option<ActiveFrameRecord>, Self::Error> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.conn();
 
         let result = conn.query_row(
             "SELECT project, start FROM active_frame WHERE lock = 1",
@@ -149,7 +161,7 @@ impl Storage for SqliteStorage {
     }
 
     fn save_active(&self, frame: Option<&ActiveFrameRecord>) -> Result<(), Self::Error> {
-        let mut conn = self.conn.lock().unwrap();
+        let mut conn = self.conn();
         let tx = conn.transaction()?;
 
         tx.execute("DELETE FROM active_frame", [])?;
