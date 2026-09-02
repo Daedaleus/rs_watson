@@ -86,7 +86,7 @@ fn statusline_includes_completed_frames_in_total() {
         .clone();
 
     let line = String::from_utf8(out).unwrap();
-    let time_part = line.trim().split_whitespace().nth(1).unwrap();
+    let time_part = line.split_whitespace().nth(1).unwrap();
     let parts: Vec<u64> = time_part.split(':').map(|s| s.parse().unwrap()).collect();
     let total_minutes = parts[0] * 60 + parts[1];
     assert!(
