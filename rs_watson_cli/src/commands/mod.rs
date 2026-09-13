@@ -256,7 +256,7 @@ pub(crate) fn dispatch<S: Storage<Error: std::error::Error + Send + Sync + 'stat
             from,
             to,
         } => frames::cmd_add(&watson, project, tags, from, to, config),
-        Commands::Edit { id } => frames::cmd_edit(&watson, id),
+        Commands::Edit { id } => frames::cmd_edit(&watson, id, config),
         Commands::Remove { id } => frames::cmd_remove(&watson, id),
         Commands::Rename { from, to } => meta::cmd_rename(&watson, from, to),
         Commands::Projects => meta::cmd_projects(&watson),
