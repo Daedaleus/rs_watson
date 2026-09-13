@@ -259,6 +259,7 @@ fn prompt_project_and_tags(project: &str, tags: &[String]) -> Result<(String, Ve
     let tags_input: String = Input::with_theme(&ColorfulTheme::default())
         .with_prompt("Tags  (comma-separated, empty for none)")
         .with_initial_text(tags.join(", "))
+        .allow_empty(true)
         .interact_text()?;
     let new_tags = tags_input
         .split(',')
