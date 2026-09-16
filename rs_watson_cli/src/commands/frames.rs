@@ -174,45 +174,40 @@ pub(super) fn cmd_add<S: Storage<Error: std::error::Error + Send + Sync + 'stati
 pub(super) fn cmd_edit<S: Storage<Error: std::error::Error + Send + Sync + 'static>>(
     watson: &Watson<S>,
     id: Option<String>,
+    config: &Config,
 ) -> Result<()> {
     let mut frames = watson.log().map_err(w_err)?;
-    if frames.is_empty() {
-        println!("{}", "No frames to edit.".bright_black());
-        return Ok(());
-    }
     frames.reverse();
+    let active = watson.status().map_err(w_err)?;
 
+    // The running frame has no persistent ID, so it is only reachable via the selector.
     let frame = if let Some(short) = id {
         find_by_short_id(&frames, &short)?.clone()
     } else {
+        if frames.is_empty() && active.is_none() {
+            println!("{}", "No frames to edit.".bright_black());
+            return Ok(());
+        }
         let recent = recent_frames(&frames);
-        let items = frame_selector_items(recent);
+        let mut items = frame_selector_items(recent);
+        if let Some(active) = &active {
+            items.insert(0, active_selector_item(active));
+        }
         let selection = Select::with_theme(&ColorfulTheme::default())
             .with_prompt("Select frame to edit")
             .items(&items)
             .default(0)
             .interact()?;
-        recent[selection].clone()
+        match (&active, selection) {
+            (Some(active), 0) => return edit_active_frame(watson, active, config),
+            (Some(_), i) => recent[i - 1].clone(),
+            (None, i) => recent[i].clone(),
+        }
     };
     let frame = &frame;
     println!();
 
-    let new_project: String = Input::with_theme(&ColorfulTheme::default())
-        .with_prompt("Project")
-        .with_initial_text(&frame.project)
-        .interact_text()?;
-
-    let tags_default = frame.tags.join(", ");
-    let tags_input: String = Input::with_theme(&ColorfulTheme::default())
-        .with_prompt("Tags  (comma-separated, empty for none)")
-        .with_initial_text(&tags_default)
-        .interact_text()?;
-    let new_tags: Vec<String> = tags_input
-        .split(',')
-        .map(|s| s.trim().to_string())
-        .filter(|s| !s.is_empty())
-        .collect();
-
+    let (new_project, new_tags) = prompt_project_and_tags(&frame.project, &frame.tags)?;
     let new_start = prompt_time("Start  (HH:MM or YYYY-MM-DD HH:MM)", frame.start)?;
     let new_end = prompt_time("End    (HH:MM or YYYY-MM-DD HH:MM)", frame.end)?;
 
@@ -227,6 +222,51 @@ pub(super) fn cmd_edit<S: Storage<Error: std::error::Error + Send + Sync + 'stat
     println!();
     print_frame_summary("Updated ".green().bold(), &updated);
     Ok(())
+}
+
+/// Edits project, tags and start of the running frame — it has no end time to prompt for.
+fn edit_active_frame<S: Storage<Error: std::error::Error + Send + Sync + 'static>>(
+    watson: &Watson<S>,
+    active: &rs_watson::ActiveFrame,
+    config: &Config,
+) -> Result<()> {
+    println!();
+    let (new_project, new_tags) = prompt_project_and_tags(&active.project, &active.tags)?;
+    let new_start = prompt_time("Start  (HH:MM or YYYY-MM-DD HH:MM)", active.start)?;
+    check_future(new_start, config)?;
+
+    let updated = watson
+        .edit_active(new_project, new_tags, new_start)
+        .map_err(w_err)?;
+
+    println!();
+    println!(
+        "{} {}{} {}",
+        "Updated ".green().bold(),
+        updated.project.yellow().bold(),
+        fmt_tags(&updated.tags),
+        format!("(running since {})", fmt_time(updated.start)).bright_black(),
+    );
+    Ok(())
+}
+
+fn prompt_project_and_tags(project: &str, tags: &[String]) -> Result<(String, Vec<String>)> {
+    let new_project: String = Input::with_theme(&ColorfulTheme::default())
+        .with_prompt("Project")
+        .with_initial_text(project)
+        .interact_text()?;
+
+    let tags_input: String = Input::with_theme(&ColorfulTheme::default())
+        .with_prompt("Tags  (comma-separated, empty for none)")
+        .with_initial_text(tags.join(", "))
+        .allow_empty(true)
+        .interact_text()?;
+    let new_tags = tags_input
+        .split(',')
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+        .collect();
+    Ok((new_project, new_tags))
 }
 
 pub(super) fn cmd_remove<S: Storage<Error: std::error::Error + Send + Sync + 'static>>(
@@ -310,6 +350,25 @@ fn find_by_short_id<'a>(
             matches.len()
         ),
     }
+}
+
+/// Selector line for the running frame, shaped like `frame_selector_items` but ending in "now".
+fn active_selector_item(active: &rs_watson::ActiveFrame) -> String {
+    let elapsed = chrono::Utc::now() - active.start;
+    format!(
+        "{}  {} → {:<5}  {:<10}  {}{}  {}",
+        active.start.format("%Y-%m-%d"),
+        fmt_time(active.start),
+        "now",
+        fmt_duration(elapsed),
+        active.project,
+        if active.tags.is_empty() {
+            String::new()
+        } else {
+            format!("  [{}]", active.tags.join(", "))
+        },
+        "running",
+    )
 }
 
 /// Builds the display strings for the interactive frame selector used by edit and remove.

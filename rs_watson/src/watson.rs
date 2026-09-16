@@ -240,6 +240,30 @@ impl<S: Storage> Watson<S> {
         Ok(frame)
     }
 
+    /// Updates project, tags and start time of the running frame.
+    ///
+    /// The running frame covers `[start, now)`, so any recorded frame that ends after the
+    /// new start overlaps it — checking against an open-ended interval catches that here
+    /// instead of letting `stop` fail later.
+    pub fn edit_active(
+        &self,
+        project: impl Into<String>,
+        tags: Vec<String>,
+        start: DateTime<Utc>,
+    ) -> Result<ActiveFrame, WatsonError<S::Error>> {
+        if self.load_active()?.is_none() {
+            return Err(WatsonError::NotTracking);
+        }
+        let records = self.load_frames()?;
+        if let Some(conflict) = find_overlap(start, Some(DateTime::<Utc>::MAX_UTC), &records, None)
+        {
+            return Err(WatsonError::OverlappingFrame(conflict.project.clone()));
+        }
+        let active = ActiveFrame::new(project, tags, start);
+        self.save_active(Some(&ActiveFrameRecord::from(&active)))?;
+        Ok(active)
+    }
+
     pub fn remove(&self, id: Uuid) -> Result<Frame, WatsonError<S::Error>> {
         self.modify_frames(|records| {
             let pos = records
@@ -777,5 +801,63 @@ mod tests {
         w.start("backend", vec![], t(9, 0)).unwrap();
         let err = w.stop(t(10, 30)).unwrap_err();
         assert!(matches!(err, WatsonError::OverlappingFrame(_)));
+    }
+    // --- edit_active ---
+
+    #[test]
+    fn edit_active_updates_project_tags_and_start() {
+        let w = w();
+        w.start("backend", vec!["api".into()], t(9, 0)).unwrap();
+        let edited = w
+            .edit_active("frontend", vec!["ui".into(), "css".into()], t(8, 30))
+            .unwrap();
+        assert_eq!(
+            edited,
+            ActiveFrame::new("frontend", vec!["ui".into(), "css".into()], t(8, 30))
+        );
+        assert_eq!(w.status().unwrap(), Some(edited));
+    }
+
+    #[test]
+    fn edit_active_when_not_tracking_returns_error() {
+        let w = w();
+        assert!(matches!(
+            w.edit_active("backend", vec![], t(9, 0)).unwrap_err(),
+            WatsonError::NotTracking
+        ));
+    }
+
+    #[test]
+    fn edit_active_rejects_start_inside_recorded_frame() {
+        let w = w();
+        w.add("meeting", vec![], t(8, 0), t(9, 0)).unwrap();
+        w.start("backend", vec![], t(9, 30)).unwrap();
+        let err = w.edit_active("backend", vec![], t(8, 30)).unwrap_err();
+        assert!(matches!(err, WatsonError::OverlappingFrame(p) if p == "meeting"));
+        // Rejected edits leave the running frame untouched.
+        assert_eq!(w.status().unwrap().unwrap().start, t(9, 30));
+    }
+
+    #[test]
+    fn edit_active_rejects_start_before_a_recorded_frame() {
+        // A frame fully inside [new start, now) is an overlap too, not only one containing start.
+        let w = w();
+        w.add("meeting", vec![], t(8, 0), t(9, 0)).unwrap();
+        w.start("backend", vec![], t(9, 30)).unwrap();
+        assert!(matches!(
+            w.edit_active("backend", vec![], t(7, 0)).unwrap_err(),
+            WatsonError::OverlappingFrame(_)
+        ));
+    }
+
+    #[test]
+    fn edit_active_allows_start_exactly_at_previous_frame_end() {
+        let w = w();
+        w.add("meeting", vec![], t(8, 0), t(9, 0)).unwrap();
+        w.start("backend", vec![], t(9, 30)).unwrap();
+        assert_eq!(
+            w.edit_active("backend", vec![], t(9, 0)).unwrap().start,
+            t(9, 0)
+        );
     }
 }
