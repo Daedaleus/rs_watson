@@ -8,7 +8,7 @@ use uuid::Uuid;
 use crate::app::WatsonApp;
 use crate::colors::{CLR_CYAN, CLR_PURPLE, CLR_RED};
 use crate::format::{fmt_duration, fmt_time};
-use crate::types::EditState;
+use crate::types::{EditState, EditTarget};
 use crate::widgets::{date_filter_bar, empty_frames};
 
 impl WatsonApp {
@@ -148,7 +148,14 @@ impl WatsonApp {
         let mut save = false;
         let mut close = false;
 
-        egui::Window::new("Edit Frame")
+        let editing_active = state.target == EditTarget::Active;
+        let title = if editing_active {
+            "Edit Running Frame"
+        } else {
+            "Edit Frame"
+        };
+
+        egui::Window::new(title)
             .collapsible(false)
             .resizable(false)
             .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
@@ -173,8 +180,17 @@ impl WatsonApp {
                         ui.add(egui::TextEdit::singleline(&mut state.start).desired_width(220.0));
                         ui.end_row();
 
-                        ui.label("End");
-                        ui.add(egui::TextEdit::singleline(&mut state.end).desired_width(220.0));
+                        if editing_active {
+                            ui.label("End");
+                            ui.label(
+                                egui::RichText::new("still running")
+                                    .color(egui::Color32::GRAY)
+                                    .italics(),
+                            );
+                        } else {
+                            ui.label("End");
+                            ui.add(egui::TextEdit::singleline(&mut state.end).desired_width(220.0));
+                        }
                         ui.end_row();
                     });
 
