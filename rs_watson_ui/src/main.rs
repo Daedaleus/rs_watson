@@ -15,7 +15,7 @@ use eframe::egui;
 use app::WatsonApp;
 use colors::{CLR_GREEN, CLR_RED};
 use format::{fmt_duration, fmt_tags};
-use types::Tab;
+use types::{EditState, Tab};
 use widgets::{feedback_label, project_autocomplete};
 
 fn main() -> eframe::Result {
@@ -58,6 +58,8 @@ impl eframe::App for WatsonApp {
             self.show_edit_modal(&ctx);
         }
 
+        // Collected during rendering — `self` is borrowed by the closure below.
+        let mut edit_active = false;
         egui::Panel::top("status_bar").show_inside(ui, |ui| {
             ui.add_space(5.0);
             ui.horizontal(|ui| match &self.status {
@@ -73,6 +75,13 @@ impl eframe::App for WatsonApp {
                         ))
                         .strong(),
                     );
+                    if ui
+                        .small_button("Edit")
+                        .on_hover_text("Edit project, tags or start time of the running frame")
+                        .clicked()
+                    {
+                        edit_active = true;
+                    }
                 }
                 None => {
                     ui.label(egui::RichText::new("○ Not tracking").color(egui::Color32::GRAY));
@@ -80,6 +89,11 @@ impl eframe::App for WatsonApp {
             });
             ui.add_space(4.0);
         });
+
+        if edit_active && let Some(active) = &self.status {
+            self.edit_state = Some(EditState::from_active(active));
+            self.delete_confirm_id = None;
+        }
 
         egui::Panel::top("toolbar").show_inside(ui, |ui| {
             ui.add_space(5.0);

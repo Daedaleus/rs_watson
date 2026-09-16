@@ -5,7 +5,7 @@ use rs_watson_storage::sqlite::SqliteStorage;
 use uuid::Uuid;
 
 use crate::format::{collect_projects, fmt_duration, parse_local_date, parse_local_dt, parse_tags};
-use crate::types::{EditState, Tab};
+use crate::types::{EditState, EditTarget, Tab};
 
 pub(crate) struct WatsonApp {
     pub(crate) watson: Watson<SqliteStorage>,
@@ -227,17 +227,29 @@ impl WatsonApp {
             state.error = Some("Invalid start time.".into());
             return;
         };
-        let Some(end) = parse_local_dt(&state.end) else {
-            state.error = Some("Invalid end time.".into());
-            return;
-        };
         let tags = parse_tags(&state.tags);
-        let id = state.id;
+        let target = state.target;
 
-        match self.watson.edit(id, project, tags, start, end) {
-            Ok(_) => {
+        // The running frame has no end time, so only a recorded frame parses one.
+        let result = match target {
+            EditTarget::Frame(id) => {
+                let Some(end) = parse_local_dt(&state.end) else {
+                    state.error = Some("Invalid end time.".into());
+                    return;
+                };
+                self.watson.edit(id, project, tags, start, end).map(|_| ())
+            }
+            EditTarget::Active => self.watson.edit_active(project, tags, start).map(|_| ()),
+        };
+
+        match result {
+            Ok(()) => {
                 self.edit_state = None;
-                self.set_msg(true, "Frame updated.");
+                let msg = match target {
+                    EditTarget::Frame(_) => "Frame updated.",
+                    EditTarget::Active => "Running frame updated.",
+                };
+                self.set_msg(true, msg);
                 self.refresh();
             }
             Err(e) => {
